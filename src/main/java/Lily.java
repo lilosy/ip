@@ -20,7 +20,7 @@ public class Lily {
         System.out.println(openingMessage);
 
         while (true) {
-            String userInput = myObj.nextLine();  // Read user input
+            String userInput = myObj.nextLine().trim();  // Read user input
             if (userInput.equals("bye")) {
                 break;
             } else if (userInput.equals("list")) {
