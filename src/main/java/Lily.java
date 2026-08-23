@@ -101,20 +101,26 @@ public class Lily {
 
     public static void addTodo(List<Task> tasks, String userInput) {
         String[] parts = userInput.split(" ", 2);
-        tasks.add(new ToDo(parts[1]));
+        Task newTask = new ToDo(parts[1]);
+        tasks.add(newTask);
+        System.out.println("Got it. I've added this task:\n\t" + newTask.toString());
     }
 
     public static void addDeadline(List<Task> tasks, String userInput) {
         String[] parts = userInput.split(" ", 2);
         String deadlineTaskdDesc = parts[1];
         String[] deadlineParts = deadlineTaskdDesc.split(" /by ", 2);
-        tasks.add(new Deadline(deadlineParts[0], deadlineParts[1]));
+        Task newTask = new Deadline(deadlineParts[0], deadlineParts[1]);
+        tasks.add(newTask);
+        System.out.println("Got it. I've added this task:\n\t" + newTask.toString());
     }
 
     public static void addEvent(List<Task> tasks, String userInput) {
         String[] parts = userInput.split(" ", 2);
         String eventTaskDesc = parts[1];
         String[] eventParts = eventTaskDesc.split(" /from | /to ", 3);
-        tasks.add(new Event(eventParts[0], eventParts[1], eventParts[2]));
+        Task newTask = new Event(eventParts[0], eventParts[1], eventParts[2]);
+        tasks.add(newTask);
+        System.out.println("Got it. I've added this task:\n\t" + newTask.toString());
     }
 }
