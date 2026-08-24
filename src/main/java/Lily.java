@@ -45,6 +45,8 @@ public class Lily {
                     addDeadline(tasks, userInput);
                 } else if (command.equals("event")) {
                     addEvent(tasks, userInput);
+                } else if (command.equals("delete")) {
+                    deleteTask(tasks, userInput);
                 }
                 else {
 
@@ -140,5 +142,26 @@ public class Lily {
         Task newTask = new Event(eventParts[0], eventParts[1], eventParts[2]);
         tasks.add(newTask);
         System.out.println("Got it. I've added this task:\n\t" + newTask.toString());
+    }
+
+    public static void deleteTask(List<Task> tasks, String userInput) throws LilyException{
+        String parts[] = userInput.split(" ", 2);
+        if (parts.length != 2) {
+            throw new LilyException("Wrong format for delete, please enter as such: delete taskNumber");
+        }
+        try {
+            int taskIndex = Integer.parseInt(parts[1]) - 1;
+            if (taskIndex < 0 || taskIndex >= tasks.size()) {
+                System.out.println("That task number does not exist.");
+            } else {
+                Task task = tasks.get(taskIndex);
+                tasks.remove(taskIndex);
+                System.out.println("OK! I've removed this task:");
+                System.out.println("\t" + task);
+            }
+        } catch (NumberFormatException e) {
+            System.out.println("Please provide a valid task number.");
+        }
+
     }
 }
