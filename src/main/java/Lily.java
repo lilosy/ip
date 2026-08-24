@@ -29,28 +29,31 @@ public class Lily {
             }
             String parts[] = userInput.split(" ", 2);
             String command = parts[0];
-
-            if (command.equals("list")) {
-                listTasks(tasks, taskCount);
-            } else if (command.equals("mark")) {
-                String taskNumberText = parts[1];
-                markTask(tasks, taskNumberText);
-            } else if (command.equals("unmark")) {
+            try {
+                if (command.equals("list")) {
+                    listTasks(tasks, taskCount);
+                } else if (command.equals("mark")) {
+                    String taskNumberText = parts[1];
+                    markTask(tasks, taskNumberText);
+                } else if (command.equals("unmark")) {
 //                String taskNumberText = userInput.substring(7);
-                String taskNumberText = parts[1];
-                unmarkTask(tasks, taskNumberText);
-            } else if (command.equals("todo")) {
-                addTodo(tasks, userInput);
-            } else if (command.equals("deadline")) {
-                addDeadline(tasks, userInput);
-            } else if (command.equals("event")) {
-                addEvent(tasks, userInput);
-            }
-            else {
+                    String taskNumberText = parts[1];
+                    unmarkTask(tasks, taskNumberText);
+                } else if (command.equals("todo")) {
+                    addTodo(tasks, userInput);
+                } else if (command.equals("deadline")) {
+                    addDeadline(tasks, userInput);
+                } else if (command.equals("event")) {
+                    addEvent(tasks, userInput);
+                }
+                else {
 
-                System.out.println("---------------------");
-                System.out.println("invalid command");
-                System.out.println("---------------------");
+                    System.out.println("---------------------");
+                    System.out.println("invalid command");
+                    System.out.println("---------------------");
+                }
+            } catch(LilyException e) {
+                System.out.println(e.getMessage());
             }
 
         }
@@ -99,24 +102,39 @@ public class Lily {
         }
     }
 
-    public static void addTodo(List<Task> tasks, String userInput) {
+    public static void addTodo(List<Task> tasks, String userInput) throws LilyException {
         String[] parts = userInput.split(" ", 2);
+        if (parts.length < 2) {
+            throw new LilyException("Add a description for the todo task");
+        }
         Task newTask = new ToDo(parts[1]);
         tasks.add(newTask);
         System.out.println("Got it. I've added this task:\n\t" + newTask.toString());
     }
 
-    public static void addDeadline(List<Task> tasks, String userInput) {
+    public static void addDeadline(List<Task> tasks, String userInput) throws LilyException{
         String[] parts = userInput.split(" ", 2);
+        if (parts.length < 2) {
+            throw new LilyException("Add a description for the deadline task");
+        }
         String deadlineTaskdDesc = parts[1];
         String[] deadlineParts = deadlineTaskdDesc.split(" /by ", 2);
+        if (deadlineParts.length < 2) {
+            throw new LilyException("Add a deadline for the task");
+        }
         Task newTask = new Deadline(deadlineParts[0], deadlineParts[1]);
         tasks.add(newTask);
         System.out.println("Got it. I've added this task:\n\t" + newTask.toString());
     }
 
-    public static void addEvent(List<Task> tasks, String userInput) {
+    public static void addEvent(List<Task> tasks, String userInput) throws LilyException {
         String[] parts = userInput.split(" ", 2);
+        if (parts.length < 2) {
+            throw new LilyException("Add a description for the event");
+        }
+        if(!parts[1].matches(".*\\s/from\\s.*\\s/to\\s.*")) {
+            throw new LilyException("Wrong formate for event");
+        }
         String eventTaskDesc = parts[1];
         String[] eventParts = eventTaskDesc.split(" /from | /to ", 3);
         Task newTask = new Event(eventParts[0], eventParts[1], eventParts[2]);
