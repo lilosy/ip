@@ -16,11 +16,13 @@ public class Lily {
         Scanner myObj = new Scanner(System.in);  // Create a Scanner object
         String openingMessage = "Hey there! I'm Lily.\nWhat would you like to do today?";
         String closingMessage = "Bye! See you soon :)";
+        String divider = "----------------------------------------------------------";
         List<Task> tasks = new ArrayList<>();
         int taskCount = 0;
 
         System.out.println(banner);
         System.out.println(openingMessage);
+        System.out.println(divider);
 
         while (true) {
             String userInput = myObj.nextLine().trim();  // Read user input
@@ -49,13 +51,12 @@ public class Lily {
                     deleteTask(tasks, userInput);
                 }
                 else {
-
-                    System.out.println("---------------------");
                     System.out.println("invalid command");
-                    System.out.println("---------------------");
                 }
+                System.out.println(divider);
             } catch(LilyException e) {
                 System.out.println(e.getMessage());
+                System.out.println(divider);
             }
 
         }
@@ -112,6 +113,7 @@ public class Lily {
         Task newTask = new ToDo(parts[1]);
         tasks.add(newTask);
         System.out.println("Got it. I've added this task:\n\t" + newTask.toString());
+        printTaskListSummary(tasks);
     }
 
     public static void addDeadline(List<Task> tasks, String userInput) throws LilyException{
@@ -127,6 +129,7 @@ public class Lily {
         Task newTask = new Deadline(deadlineParts[0], deadlineParts[1]);
         tasks.add(newTask);
         System.out.println("Got it. I've added this task:\n\t" + newTask.toString());
+        printTaskListSummary(tasks);
     }
 
     public static void addEvent(List<Task> tasks, String userInput) throws LilyException {
@@ -135,13 +138,14 @@ public class Lily {
             throw new LilyException("Add a description for the event");
         }
         if(!parts[1].matches(".*\\s/from\\s.*\\s/to\\s.*")) {
-            throw new LilyException("Wrong formate for event");
+            throw new LilyException("Wrong format for event, use this format: event [event desc] /from [...] /to [...]");
         }
         String eventTaskDesc = parts[1];
         String[] eventParts = eventTaskDesc.split(" /from | /to ", 3);
         Task newTask = new Event(eventParts[0], eventParts[1], eventParts[2]);
         tasks.add(newTask);
         System.out.println("Got it. I've added this task:\n\t" + newTask.toString());
+        printTaskListSummary(tasks);
     }
 
     public static void deleteTask(List<Task> tasks, String userInput) throws LilyException{
@@ -158,10 +162,15 @@ public class Lily {
                 tasks.remove(taskIndex);
                 System.out.println("OK! I've removed this task:");
                 System.out.println("\t" + task);
+                printTaskListSummary(tasks);
             }
         } catch (NumberFormatException e) {
             System.out.println("Please provide a valid task number.");
         }
 
+    }
+
+    public static void printTaskListSummary(List<Task> tasks) {
+        System.out.println("Now you have " + tasks.size() + " tasks in the list");
     }
 }
