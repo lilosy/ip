@@ -1,6 +1,5 @@
 import java.io.IOException;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Scanner;
 
@@ -22,7 +21,7 @@ public class Lily {
         String divider = "----------------------------------------------------------";
         // loadTasks() never throws: a missing, unreadable, or partially corrupted save
         // file is handled internally (with a printed warning) so startup always succeeds.
-        List<Task> tasks = Storage.loadTasks();
+        TaskList tasks = new TaskList(Storage.loadTasks());
 
         System.out.println(banner);
         System.out.println(openingMessage);
@@ -82,7 +81,7 @@ public class Lily {
                     System.out.println("invalid command");
                 }
                 if (taskListChanged) {
-                    Storage.saveTasks(tasks);
+                    Storage.saveTasks(tasks.toList());
                 }
                 System.out.println(divider);
             } catch (LilyException | IOException e) {
@@ -102,22 +101,22 @@ public class Lily {
     }
 
     /** Prints every task in the current list. */
-    public static void listTasks(List<Task> tasks) {
+    public static void listTasks(TaskList tasks) {
         for (int i = 0; i < tasks.size(); i++) {
             System.out.println(String.format("%d. %s", i + 1, tasks.get(i).toString()));
         }
     }
 
     /** Marks the requested task as done and reports whether it was found. */
-    public static boolean markTask(List<Task> tasks, String taskNum) {
+    public static boolean markTask(TaskList tasks, String taskNum) {
         try {
             int taskIndex = Integer.parseInt(taskNum) - 1;
-            if (taskIndex < 0 || taskIndex >= tasks.size()) {
+            if (!tasks.containsIndex(taskIndex)) {
                 System.out.println("That task number does not exist.");
                 return false;
             } else {
+                tasks.mark(taskIndex);
                 Task task = tasks.get(taskIndex);
-                task.markAsDone();
                 System.out.println("Nice! I've marked this task as done:");
                 System.out.println("  " + task);
                 return true;
@@ -130,15 +129,15 @@ public class Lily {
     }
 
     /** Marks the requested task as not done and reports whether it was found. */
-    public static boolean unmarkTask(List<Task> tasks, String taskNum) {
+    public static boolean unmarkTask(TaskList tasks, String taskNum) {
         try {
             int taskIndex = Integer.parseInt(taskNum) - 1;
-            if (taskIndex < 0 || taskIndex >= tasks.size()) {
+            if (!tasks.containsIndex(taskIndex)) {
                 System.out.println("That task number does not exist.");
                 return false;
             } else {
+                tasks.unmark(taskIndex);
                 Task task = tasks.get(taskIndex);
-                task.markAsUndone();
                 System.out.println(" OK, I've marked this task as not done yet:");
                 System.out.println("  " + task);
                 return true;
@@ -150,7 +149,7 @@ public class Lily {
         }
     }
 
-    public static void addTodo(List<Task> tasks, String userInput) throws LilyException {
+    public static void addTodo(TaskList tasks, String userInput) throws LilyException {
         String[] parts = userInput.split(" ", 2);
         if (parts.length < 2) {
             throw new LilyException("Add a description for the todo task");
@@ -161,7 +160,7 @@ public class Lily {
         printTaskListSummary(tasks);
     }
 
-    public static void addDeadline(List<Task> tasks, String userInput) throws LilyException{
+    public static void addDeadline(TaskList tasks, String userInput) throws LilyException{
         String[] parts = userInput.split(" ", 2);
         if (parts.length < 2) {
             throw new LilyException("Add a description for the deadline task");
@@ -182,7 +181,7 @@ public class Lily {
         printTaskListSummary(tasks);
     }
 
-    public static void addEvent(List<Task> tasks, String userInput) throws LilyException {
+    public static void addEvent(TaskList tasks, String userInput) throws LilyException {
         String[] parts = userInput.split(" ", 2);
         if (parts.length < 2) {
             throw new LilyException("Add a description for the event");
@@ -208,14 +207,14 @@ public class Lily {
     }
 
     /** Removes the requested task and reports whether the task list changed. */
-    public static boolean deleteTask(List<Task> tasks, String userInput) throws LilyException{
+    public static boolean deleteTask(TaskList tasks, String userInput) throws LilyException{
         String parts[] = userInput.split(" ", 2);
         if (parts.length != 2) {
             throw new LilyException("Wrong format for delete, please enter as such: delete taskNumber");
         }
         try {
             int taskIndex = Integer.parseInt(parts[1]) - 1;
-            if (taskIndex < 0 || taskIndex >= tasks.size()) {
+            if (!tasks.containsIndex(taskIndex)) {
                 System.out.println("That task number does not exist.");
                 return false;
             } else {
@@ -233,7 +232,7 @@ public class Lily {
 
     }
 
-    public static void printTaskListSummary(List<Task> tasks) {
+    public static void printTaskListSummary(TaskList tasks) {
         System.out.println("Now you have " + tasks.size() + " tasks in the list");
     }
 }

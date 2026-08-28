@@ -43,7 +43,7 @@ Bye! See you soon :)
 **Input**
 
 ```powershell
-Remove-Item -LiteralPath data\lily.txt -ErrorAction SilentlyContinue; javac -d _temp\ui-test-out src\main\java\*.java; "todo read book`ndeadline return book /by June 6th`nmark 1`nbye" | java -cp _temp\ui-test-out Lily; Get-Content -LiteralPath data\lily.txt; Remove-Item -LiteralPath data\lily.txt
+Remove-Item -LiteralPath data\lily.txt -ErrorAction SilentlyContinue; javac -d _temp\ui-test-out src\main\java\*.java; "todo read book`ndeadline return book /by 2019-12-02`nmark 1`nbye" | java -cp _temp\ui-test-out Lily; Get-Content -LiteralPath data\lily.txt; Remove-Item -LiteralPath data\lily.txt
 ```
 
 **Expected output**
@@ -66,7 +66,7 @@ Got it. I've added this task:
 Now you have 1 tasks in the list
 ----------------------------------------------------------
 Got it. I've added this task:
-	[D][ ] return book (by: June 6th)
+	[D][ ] return book (by: Dec 02 2019)
 Now you have 2 tasks in the list
 ----------------------------------------------------------
 Nice! I've marked this task as done:
@@ -75,7 +75,7 @@ Nice! I've marked this task as done:
 
 Bye! See you soon :)
 T | 1 | read book
-D | 0 | return book | June 6th
+D | 0 | return book | 2019-12-02T00:00
 ```
 
 ## Test Case: Load saved tasks
@@ -87,7 +87,7 @@ D | 0 | return book | June 6th
 **Input**
 
 ```powershell
-New-Item -ItemType Directory -Path data -Force | Out-Null; @("T | 1 | read book", "D | 0 | return book | June 6th", "E | 1 | project meeting | 2pm | 4pm") | Set-Content -LiteralPath data\lily.txt; javac -d _temp\ui-test-out src\main\java\*.java; "list`nbye" | java -cp _temp\ui-test-out Lily; Remove-Item -LiteralPath data\lily.txt
+New-Item -ItemType Directory -Path data -Force | Out-Null; @("T | 1 | read book", "D | 0 | return book | 2019-12-02T00:00", "E | 1 | project meeting | 2019-12-02T14:00 | 2019-12-02T16:00") | Set-Content -LiteralPath data\lily.txt; javac -d _temp\ui-test-out src\main\java\*.java; "list`nbye" | java -cp _temp\ui-test-out Lily; Remove-Item -LiteralPath data\lily.txt
 ```
 
 **Expected output**
@@ -106,8 +106,8 @@ Hey there! I'm Lily.
 What would you like to do today?
 ----------------------------------------------------------
 1. [T][X] read book
-2. [D][ ] return book (by: June 6th)
-3. [E][X] project meeting (from: 2pm to: 4pm)
+2. [D][ ] return book (by: Dec 02 2019)
+3. [E][X] project meeting (from: Dec 02 2019, 2:00pm to: Dec 02 2019, 4:00pm)
 ----------------------------------------------------------
 
 Bye! See you soon :)
