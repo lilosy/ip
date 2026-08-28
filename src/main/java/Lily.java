@@ -1,6 +1,6 @@
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Scanner;
 
 /** Runs Lily's command-line task manager. */
@@ -19,29 +19,50 @@ public class Lily {
         String openingMessage = "Hey there! I'm Lily.\nWhat would you like to do today?";
         String closingMessage = "Bye! See you soon :)";
         String divider = "----------------------------------------------------------";
-        List<Task> tasks = new ArrayList<>();
+        // loadTasks() never throws: a missing, unreadable, or partially corrupted save
+        // file is handled internally (with a printed warning) so startup always succeeds.
+        List<Task> tasks = Storage.loadTasks();
 
         System.out.println(banner);
         System.out.println(openingMessage);
         System.out.println(divider);
 
         while (true) {
-            String userInput = myObj.nextLine().trim();  // Read user input
+            String userInput;
+            try {
+                // If input is piped/redirected and runs out without a "bye", Scanner
+                // throws NoSuchElementException instead of blocking forever; treat
+                // that the same as the user typing "bye" so we still shut down cleanly.
+                userInput = myObj.nextLine().trim();
+            } catch (NoSuchElementException | IllegalStateException e) {
+                break;
+            }
+            if (userInput.isEmpty()) {
+                // Blank line: nothing to do, just prompt again instead of treating
+                // it as an "invalid command" (split(" ", 2) on "" gives [""]).
+                System.out.println(divider);
+                continue;
+            }
             if (userInput.equals("bye")) {
                 break;
             }
             String parts[] = userInput.split(" ", 2);
             String command = parts[0];
+            String argument = parts.length > 1 ? parts[1].trim() : "";
             try {
                 boolean taskListChanged = false;
                 if (command.equals("list")) {
                     listTasks(tasks);
                 } else if (command.equals("mark")) {
-                    String taskNumberText = parts[1];
-                    taskListChanged = markTask(tasks, taskNumberText);
+                    if (argument.isEmpty()) {
+                        throw new LilyException("Please provide a task number to mark, e.g. \"mark 2\".");
+                    }
+                    taskListChanged = markTask(tasks, argument);
                 } else if (command.equals("unmark")) {
-                    String taskNumberText = parts[1];
-                    taskListChanged = unmarkTask(tasks, taskNumberText);
+                    if (argument.isEmpty()) {
+                        throw new LilyException("Please provide a task number to unmark, e.g. \"unmark 2\".");
+                    }
+                    taskListChanged = unmarkTask(tasks, argument);
                 } else if (command.equals("todo")) {
                     addTodo(tasks, userInput);
                     taskListChanged = true;
@@ -52,9 +73,11 @@ public class Lily {
                     addEvent(tasks, userInput);
                     taskListChanged = true;
                 } else if (command.equals("delete")) {
+                    if (argument.isEmpty()) {
+                        throw new LilyException("Please provide a task number to delete, e.g. \"delete 2\".");
+                    }
                     taskListChanged = deleteTask(tasks, userInput);
-                }
-                else {
+                } else {
                     System.out.println("invalid command");
                 }
                 if (taskListChanged) {
@@ -63,6 +86,11 @@ public class Lily {
                 System.out.println(divider);
             } catch (LilyException | IOException e) {
                 System.out.println(e.getMessage());
+                System.out.println(divider);
+            } catch (RuntimeException e) {
+                // Last-resort safety net: an unexpected bug in one command should
+                // never crash the whole session or lose the in-memory task list.
+                System.out.println("Something went wrong handling that command: " + e.getMessage());
                 System.out.println(divider);
             }
 
