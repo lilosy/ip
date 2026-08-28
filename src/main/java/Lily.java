@@ -1,5 +1,4 @@
 import java.io.IOException;
-import java.time.LocalDateTime;
 
 /** Runs Lily's command-line task manager. */
 public class Lily {
@@ -27,9 +26,8 @@ public class Lily {
             if (userInput.equals("bye")) {
                 break;
             }
-            String parts[] = userInput.split(" ", 2);
-            String command = parts[0];
-            String argument = parts.length > 1 ? parts[1].trim() : "";
+            String command = Parser.getCommandWord(userInput);
+            String argument = Parser.getArguments(userInput);
             try {
                 boolean taskListChanged = false;
                 if (command.equals("list")) {
@@ -57,7 +55,7 @@ public class Lily {
                     if (argument.isEmpty()) {
                         throw new LilyException("Please provide a task number to delete, e.g. \"delete 2\".");
                     }
-                    taskListChanged = deleteTask(ui, tasks, userInput);
+                    taskListChanged = deleteTask(ui, tasks, argument);
                 } else {
                     ui.showInvalidCommand();
                 }
@@ -82,120 +80,77 @@ public class Lily {
 
     /** Marks the requested task as done and reports whether it was found. */
     public static boolean markTask(Ui ui, TaskList tasks, String taskNum) {
+        int taskIndex;
         try {
-            int taskIndex = Integer.parseInt(taskNum) - 1;
-            if (!tasks.containsIndex(taskIndex)) {
-                ui.showMissingTask();
-                return false;
-            } else {
-                tasks.mark(taskIndex);
-                Task task = tasks.get(taskIndex);
-                ui.showTaskMarked(task);
-                return true;
-            }
-
-        } catch (NumberFormatException e) {
+            taskIndex = Parser.parseTaskIndex(taskNum);
+        } catch (LilyException e) {
             ui.showInvalidTaskNumber();
             return false;
         }
+        if (!tasks.containsIndex(taskIndex)) {
+            ui.showMissingTask();
+            return false;
+        }
+        tasks.mark(taskIndex);
+        Task task = tasks.get(taskIndex);
+        ui.showTaskMarked(task);
+        return true;
     }
 
     /** Marks the requested task as not done and reports whether it was found. */
     public static boolean unmarkTask(Ui ui, TaskList tasks, String taskNum) {
+        int taskIndex;
         try {
-            int taskIndex = Integer.parseInt(taskNum) - 1;
-            if (!tasks.containsIndex(taskIndex)) {
-                ui.showMissingTask();
-                return false;
-            } else {
-                tasks.unmark(taskIndex);
-                Task task = tasks.get(taskIndex);
-                ui.showTaskUnmarked(task);
-                return true;
-            }
-
-        } catch (NumberFormatException e) {
+            taskIndex = Parser.parseTaskIndex(taskNum);
+        } catch (LilyException e) {
             ui.showInvalidTaskNumber();
             return false;
         }
+        if (!tasks.containsIndex(taskIndex)) {
+            ui.showMissingTask();
+            return false;
+        }
+        tasks.unmark(taskIndex);
+        Task task = tasks.get(taskIndex);
+        ui.showTaskUnmarked(task);
+        return true;
     }
 
     public static void addTodo(Ui ui, TaskList tasks, String userInput) throws LilyException {
-        String[] parts = userInput.split(" ", 2);
-        if (parts.length < 2) {
-            throw new LilyException("Add a description for the todo task");
-        }
-        Task newTask = new ToDo(parts[1]);
+        Task newTask = Parser.parseTodo(userInput);
         tasks.add(newTask);
         ui.showTaskAdded(newTask, tasks);
     }
 
-    public static void addDeadline(Ui ui, TaskList tasks, String userInput) throws LilyException{
-        String[] parts = userInput.split(" ", 2);
-        if (parts.length < 2) {
-            throw new LilyException("Add a description for the deadline task");
-        }
-        String deadlineTaskdDesc = parts[1];
-        String[] deadlineParts = deadlineTaskdDesc.split(" /by ", 2);
-        if (deadlineParts.length < 2) {
-            throw new LilyException("Add a deadline for the task");
-        }
-        String description = deadlineParts[0].trim();
-        if (description.isEmpty()) {
-            throw new LilyException("Add a description for the deadline task");
-        }
-        LocalDateTime by = DateTimeParser.parseUserInput(deadlineParts[1]);
-        Task newTask = new Deadline(description, by);
+    public static void addDeadline(Ui ui, TaskList tasks, String userInput) throws LilyException {
+        Task newTask = Parser.parseDeadline(userInput);
         tasks.add(newTask);
         ui.showTaskAdded(newTask, tasks);
     }
 
     public static void addEvent(Ui ui, TaskList tasks, String userInput) throws LilyException {
-        String[] parts = userInput.split(" ", 2);
-        if (parts.length < 2) {
-            throw new LilyException("Add a description for the event");
-        }
-        if(!parts[1].matches(".*\\s/from\\s.*\\s/to\\s.*")) {
-            throw new LilyException("Wrong format for event, use this format: event [event desc] /from [...] /to [...]");
-        }
-        String eventTaskDesc = parts[1];
-        String[] eventParts = eventTaskDesc.split(" /from | /to ", 3);
-        String description = eventParts[0].trim();
-        if (description.isEmpty()) {
-            throw new LilyException("Add a description for the event");
-        }
-        LocalDateTime from = DateTimeParser.parseUserInput(eventParts[1]);
-        LocalDateTime to = DateTimeParser.parseUserInput(eventParts[2]);
-        if (to.isBefore(from)) {
-            throw new LilyException("The event's 'to' time can't be before its 'from' time.");
-        }
-        Task newTask = new Event(description, from, to);
+        Task newTask = Parser.parseEvent(userInput);
         tasks.add(newTask);
         ui.showTaskAdded(newTask, tasks);
     }
 
     /** Removes the requested task and reports whether the task list changed. */
-    public static boolean deleteTask(Ui ui, TaskList tasks, String userInput) throws LilyException{
-        String parts[] = userInput.split(" ", 2);
-        if (parts.length != 2) {
-            throw new LilyException("Wrong format for delete, please enter as such: delete taskNumber");
-        }
+    public static boolean deleteTask(Ui ui, TaskList tasks, String argument) {
+        int taskIndex;
         try {
-            int taskIndex = Integer.parseInt(parts[1]) - 1;
-            if (!tasks.containsIndex(taskIndex)) {
-                ui.showMissingTask();
-                return false;
-            } else {
-                Task task = tasks.get(taskIndex);
-                tasks.remove(taskIndex);
-                ui.showTaskDeleted(task, tasks);
-                return true;
-            }
-        } catch (NumberFormatException e) {
+            taskIndex = Parser.parseTaskIndex(argument);
+        } catch (LilyException e) {
             ui.showInvalidTaskNumber();
             return false;
         }
-
+        if (!tasks.containsIndex(taskIndex)) {
+            ui.showMissingTask();
+            return false;
+        }
+        Task task = tasks.get(taskIndex);
+        tasks.remove(taskIndex);
+        ui.showTaskDeleted(task, tasks);
+        return true;
     }
 
 }
