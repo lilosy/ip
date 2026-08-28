@@ -19,6 +19,11 @@ public class Task {
         this.isDone = false;
     }
 
+    /** Returns this task as a record suitable for saving to disk. */
+    public String toFileString() {
+        return "T | " + (isDone ? "1" : "0") + " | " + description;
+    }
+
     @Override
     public String toString() {
         return String.format("[%s] %s", this.getStatusIcon(), this.description);
