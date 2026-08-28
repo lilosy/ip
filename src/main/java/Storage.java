@@ -235,14 +235,15 @@ public class Storage {
                 requireFieldCount(fields, 4, "deadline");
                 requireNonBlank(fields, 2, "description");
                 requireNonBlank(fields, 3, "'by' date");
-                task = new Deadline(fields[2], fields[3]);
+                task = new Deadline(fields[2], DateTimeParser.parseStorageFormat(fields[3]));
                 break;
             case "E":
                 requireFieldCount(fields, 5, "event");
                 requireNonBlank(fields, 2, "description");
                 requireNonBlank(fields, 3, "'from' time");
                 requireNonBlank(fields, 4, "'to' time");
-                task = new Event(fields[2], fields[3], fields[4]);
+                task = new Event(fields[2], DateTimeParser.parseStorageFormat(fields[3]),
+                        DateTimeParser.parseStorageFormat(fields[4]));
                 break;
             default:
                 throw new LilyException("unknown task type '" + type + "' (expected T, D, or E)");

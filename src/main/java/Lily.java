@@ -1,4 +1,5 @@
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Scanner;
@@ -170,7 +171,12 @@ public class Lily {
         if (deadlineParts.length < 2) {
             throw new LilyException("Add a deadline for the task");
         }
-        Task newTask = new Deadline(deadlineParts[0], deadlineParts[1]);
+        String description = deadlineParts[0].trim();
+        if (description.isEmpty()) {
+            throw new LilyException("Add a description for the deadline task");
+        }
+        LocalDateTime by = DateTimeParser.parseUserInput(deadlineParts[1]);
+        Task newTask = new Deadline(description, by);
         tasks.add(newTask);
         System.out.println("Got it. I've added this task:\n\t" + newTask.toString());
         printTaskListSummary(tasks);
@@ -186,7 +192,16 @@ public class Lily {
         }
         String eventTaskDesc = parts[1];
         String[] eventParts = eventTaskDesc.split(" /from | /to ", 3);
-        Task newTask = new Event(eventParts[0], eventParts[1], eventParts[2]);
+        String description = eventParts[0].trim();
+        if (description.isEmpty()) {
+            throw new LilyException("Add a description for the event");
+        }
+        LocalDateTime from = DateTimeParser.parseUserInput(eventParts[1]);
+        LocalDateTime to = DateTimeParser.parseUserInput(eventParts[2]);
+        if (to.isBefore(from)) {
+            throw new LilyException("The event's 'to' time can't be before its 'from' time.");
+        }
+        Task newTask = new Event(description, from, to);
         tasks.add(newTask);
         System.out.println("Got it. I've added this task:\n\t" + newTask.toString());
         printTaskListSummary(tasks);

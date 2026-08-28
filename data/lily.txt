@@ -1,4 +1,3 @@
 T | 0 | homework
-E | 0 | hello | 1pm | dfkjdkf
-E | 0 | event2 | 1pm | dfdf dfdf dfd
 T | 0 | homework1
+D | 0 | hello | 2026-08-12T00:00
