@@ -1,46 +1,27 @@
 import java.io.IOException;
 import java.time.LocalDateTime;
-import java.util.NoSuchElementException;
-import java.util.Scanner;
 
 /** Runs Lily's command-line task manager. */
 public class Lily {
 
     public static void main(String[] args) {
-        String banner = " _     _ _       \n"
-                + "| |   (_) |      \n"
-                + "| |    _| |_   _ \n"
-                + "| |   | | | | | |\n"
-                + "| |___| | | |_| |\n"
-                + "\\_____/_|\\__, |  \n"
-                + "          __/ |  \n"
-                + "         |___/   \n";
-        Scanner myObj = new Scanner(System.in);  // Create a Scanner object
-        String openingMessage = "Hey there! I'm Lily.\nWhat would you like to do today?";
-        String closingMessage = "Bye! See you soon :)";
-        String divider = "----------------------------------------------------------";
+        Ui ui = new Ui();
         // loadTasks() never throws: a missing, unreadable, or partially corrupted save
         // file is handled internally (with a printed warning) so startup always succeeds.
         TaskList tasks = new TaskList(Storage.loadTasks());
 
-        System.out.println(banner);
-        System.out.println(openingMessage);
-        System.out.println(divider);
+        ui.showWelcome();
 
         while (true) {
             String userInput;
-            try {
-                // If input is piped/redirected and runs out without a "bye", Scanner
-                // throws NoSuchElementException instead of blocking forever; treat
-                // that the same as the user typing "bye" so we still shut down cleanly.
-                userInput = myObj.nextLine().trim();
-            } catch (NoSuchElementException | IllegalStateException e) {
+            userInput = ui.readCommand();
+            if (userInput == null) {
                 break;
             }
             if (userInput.isEmpty()) {
                 // Blank line: nothing to do, just prompt again instead of treating
                 // it as an "invalid command" (split(" ", 2) on "" gives [""]).
-                System.out.println(divider);
+                ui.showDivider();
                 continue;
             }
             if (userInput.equals("bye")) {
@@ -52,115 +33,104 @@ public class Lily {
             try {
                 boolean taskListChanged = false;
                 if (command.equals("list")) {
-                    listTasks(tasks);
+                    ui.showTaskList(tasks);
                 } else if (command.equals("mark")) {
                     if (argument.isEmpty()) {
                         throw new LilyException("Please provide a task number to mark, e.g. \"mark 2\".");
                     }
-                    taskListChanged = markTask(tasks, argument);
+                    taskListChanged = markTask(ui, tasks, argument);
                 } else if (command.equals("unmark")) {
                     if (argument.isEmpty()) {
                         throw new LilyException("Please provide a task number to unmark, e.g. \"unmark 2\".");
                     }
-                    taskListChanged = unmarkTask(tasks, argument);
+                    taskListChanged = unmarkTask(ui, tasks, argument);
                 } else if (command.equals("todo")) {
-                    addTodo(tasks, userInput);
+                    addTodo(ui, tasks, userInput);
                     taskListChanged = true;
                 } else if (command.equals("deadline")) {
-                    addDeadline(tasks, userInput);
+                    addDeadline(ui, tasks, userInput);
                     taskListChanged = true;
                 } else if (command.equals("event")) {
-                    addEvent(tasks, userInput);
+                    addEvent(ui, tasks, userInput);
                     taskListChanged = true;
                 } else if (command.equals("delete")) {
                     if (argument.isEmpty()) {
                         throw new LilyException("Please provide a task number to delete, e.g. \"delete 2\".");
                     }
-                    taskListChanged = deleteTask(tasks, userInput);
+                    taskListChanged = deleteTask(ui, tasks, userInput);
                 } else {
-                    System.out.println("invalid command");
+                    ui.showInvalidCommand();
                 }
                 if (taskListChanged) {
                     Storage.saveTasks(tasks.toList());
                 }
-                System.out.println(divider);
+                ui.showDivider();
             } catch (LilyException | IOException e) {
-                System.out.println(e.getMessage());
-                System.out.println(divider);
+                ui.showError(e);
+                ui.showDivider();
             } catch (RuntimeException e) {
                 // Last-resort safety net: an unexpected bug in one command should
                 // never crash the whole session or lose the in-memory task list.
-                System.out.println("Something went wrong handling that command: " + e.getMessage());
-                System.out.println(divider);
+                ui.showUnexpectedError(e);
+                ui.showDivider();
             }
 
         }
 
-        System.out.println();
-        System.out.println(closingMessage);
-    }
-
-    /** Prints every task in the current list. */
-    public static void listTasks(TaskList tasks) {
-        for (int i = 0; i < tasks.size(); i++) {
-            System.out.println(String.format("%d. %s", i + 1, tasks.get(i).toString()));
-        }
+        ui.showGoodbye();
     }
 
     /** Marks the requested task as done and reports whether it was found. */
-    public static boolean markTask(TaskList tasks, String taskNum) {
+    public static boolean markTask(Ui ui, TaskList tasks, String taskNum) {
         try {
             int taskIndex = Integer.parseInt(taskNum) - 1;
             if (!tasks.containsIndex(taskIndex)) {
-                System.out.println("That task number does not exist.");
+                ui.showMissingTask();
                 return false;
             } else {
                 tasks.mark(taskIndex);
                 Task task = tasks.get(taskIndex);
-                System.out.println("Nice! I've marked this task as done:");
-                System.out.println("  " + task);
+                ui.showTaskMarked(task);
                 return true;
             }
 
         } catch (NumberFormatException e) {
-            System.out.println("Please provide a valid task number.");
+            ui.showInvalidTaskNumber();
             return false;
         }
     }
 
     /** Marks the requested task as not done and reports whether it was found. */
-    public static boolean unmarkTask(TaskList tasks, String taskNum) {
+    public static boolean unmarkTask(Ui ui, TaskList tasks, String taskNum) {
         try {
             int taskIndex = Integer.parseInt(taskNum) - 1;
             if (!tasks.containsIndex(taskIndex)) {
-                System.out.println("That task number does not exist.");
+                ui.showMissingTask();
                 return false;
             } else {
                 tasks.unmark(taskIndex);
                 Task task = tasks.get(taskIndex);
-                System.out.println(" OK, I've marked this task as not done yet:");
-                System.out.println("  " + task);
+                ui.showTaskUnmarked(task);
                 return true;
             }
 
         } catch (NumberFormatException e) {
-            System.out.println("Please provide a valid task number.");
+            ui.showInvalidTaskNumber();
             return false;
         }
     }
 
-    public static void addTodo(TaskList tasks, String userInput) throws LilyException {
+    public static void addTodo(Ui ui, TaskList tasks, String userInput) throws LilyException {
         String[] parts = userInput.split(" ", 2);
         if (parts.length < 2) {
             throw new LilyException("Add a description for the todo task");
         }
         Task newTask = new ToDo(parts[1]);
         tasks.add(newTask);
-        System.out.println("Got it. I've added this task:\n\t" + newTask.toString());
-        printTaskListSummary(tasks);
+        ui.showTaskAdded(newTask, tasks);
     }
 
-    public static void addDeadline(TaskList tasks, String userInput) throws LilyException{
+    public static void addDeadline(Ui ui, TaskList tasks, String userInput) throws LilyException{
         String[] parts = userInput.split(" ", 2);
         if (parts.length < 2) {
             throw new LilyException("Add a description for the deadline task");
@@ -177,11 +147,10 @@ public class Lily {
         LocalDateTime by = DateTimeParser.parseUserInput(deadlineParts[1]);
         Task newTask = new Deadline(description, by);
         tasks.add(newTask);
-        System.out.println("Got it. I've added this task:\n\t" + newTask.toString());
-        printTaskListSummary(tasks);
+        ui.showTaskAdded(newTask, tasks);
     }
 
-    public static void addEvent(TaskList tasks, String userInput) throws LilyException {
+    public static void addEvent(Ui ui, TaskList tasks, String userInput) throws LilyException {
         String[] parts = userInput.split(" ", 2);
         if (parts.length < 2) {
             throw new LilyException("Add a description for the event");
@@ -202,12 +171,11 @@ public class Lily {
         }
         Task newTask = new Event(description, from, to);
         tasks.add(newTask);
-        System.out.println("Got it. I've added this task:\n\t" + newTask.toString());
-        printTaskListSummary(tasks);
+        ui.showTaskAdded(newTask, tasks);
     }
 
     /** Removes the requested task and reports whether the task list changed. */
-    public static boolean deleteTask(TaskList tasks, String userInput) throws LilyException{
+    public static boolean deleteTask(Ui ui, TaskList tasks, String userInput) throws LilyException{
         String parts[] = userInput.split(" ", 2);
         if (parts.length != 2) {
             throw new LilyException("Wrong format for delete, please enter as such: delete taskNumber");
@@ -215,24 +183,19 @@ public class Lily {
         try {
             int taskIndex = Integer.parseInt(parts[1]) - 1;
             if (!tasks.containsIndex(taskIndex)) {
-                System.out.println("That task number does not exist.");
+                ui.showMissingTask();
                 return false;
             } else {
                 Task task = tasks.get(taskIndex);
                 tasks.remove(taskIndex);
-                System.out.println("OK! I've removed this task:");
-                System.out.println("\t" + task);
-                printTaskListSummary(tasks);
+                ui.showTaskDeleted(task, tasks);
                 return true;
             }
         } catch (NumberFormatException e) {
-            System.out.println("Please provide a valid task number.");
+            ui.showInvalidTaskNumber();
             return false;
         }
 
     }
 
-    public static void printTaskListSummary(TaskList tasks) {
-        System.out.println("Now you have " + tasks.size() + " tasks in the list");
-    }
 }
