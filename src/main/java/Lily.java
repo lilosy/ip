@@ -5,9 +5,10 @@ public class Lily {
 
     public static void main(String[] args) {
         Ui ui = new Ui();
-        // loadTasks() never throws: a missing, unreadable, or partially corrupted save
-        // file is handled internally (with a printed warning) so startup always succeeds.
-        TaskList tasks = new TaskList(Storage.loadTasks());
+        Storage storage = new Storage("data/lily.txt");
+        // load() never throws: a missing, unreadable, or partially corrupted save file is
+        // handled internally (with a printed warning) so startup always succeeds.
+        TaskList tasks = new TaskList(storage.load());
 
         ui.showWelcome();
 
@@ -60,7 +61,7 @@ public class Lily {
                     ui.showInvalidCommand();
                 }
                 if (taskListChanged) {
-                    Storage.saveTasks(tasks.toList());
+                    storage.save(tasks.toList());
                 }
                 ui.showDivider();
             } catch (LilyException | IOException e) {

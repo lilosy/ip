@@ -12,7 +12,11 @@ import java.util.List;
 import java.util.regex.Pattern;
 
 /**
- * Saves and loads the task list from the application's data file.
+ * Saves and loads the task list from a data file on disk.
+ *
+ * <p>Each instance is bound to one file path, supplied to the constructor (e.g.
+ * {@code new Storage("data/lily.txt")}), so a caller could in principle point Lily at a
+ * different save file without changing this class.
  *
  * <p>Loading is designed to never crash the application: unreadable files are backed up
  * and a fresh list is returned, and individual corrupted lines are skipped (with a
@@ -20,20 +24,31 @@ import java.util.regex.Pattern;
  * power loss mid-write cannot leave behind a half-written, corrupted data file.
  */
 public class Storage {
-    private static final Path DATA_DIR = Path.of("data");
-    private static final Path DATA_FILE = DATA_DIR.resolve("lily.txt");
-
     /** Literal delimiter used between fields in a saved record. */
     private static final String DELIMITER = " | ";
     private static final Pattern DELIMITER_SPLIT_PATTERN = Pattern.compile(Pattern.quote(DELIMITER));
 
-    private Storage() {
-        // Prevent instantiation; this class only exposes static utility methods.
+    private final Path dataFile;
+    private final Path dataDir;
+
+    /**
+     * Creates a Storage bound to the given file path.
+     *
+     * @param filePath path (relative or absolute) to the save file, e.g. {@code "data/lily.txt"}
+     */
+    public Storage(String filePath) {
+        this.dataFile = Path.of(filePath);
+        Path parent = dataFile.getParent();
+        this.dataDir = (parent != null) ? parent : Path.of(".");
     }
 
     /**
      * Escapes a field so it can safely be embedded in a {@value #DELIMITER}-separated
      * record even if it contains a backslash or pipe character.
+     *
+     * <p>This stays a static utility (rather than an instance method) because escaping is
+     * a pure text transformation that has nothing to do with any particular file; {@link
+     * Task} subclasses call it directly while building their own save records.
      */
     public static String escapeField(String field) {
         if (field == null) {
@@ -57,7 +72,7 @@ public class Storage {
      * @param tasks the tasks to save; must not be {@code null}, but may be empty
      * @throws IOException if the data directory or file cannot be created or written
      */
-    public static void saveTasks(List<Task> tasks) throws IOException {
+    public void save(List<Task> tasks) throws IOException {
         if (tasks == null) {
             throw new IOException("Cannot save a null task list.");
         }
@@ -65,7 +80,7 @@ public class Storage {
         try {
             createDataDirectory();
         } catch (FileAlreadyExistsException e) {
-            throw new IOException("Cannot save tasks: '" + DATA_DIR
+            throw new IOException("Cannot save tasks: '" + dataDir
                     + "' exists but is not a directory. Please remove or rename it.", e);
         }
 
@@ -81,34 +96,34 @@ public class Storage {
 
         Path tempFile = null;
         try {
-            tempFile = Files.createTempFile(DATA_DIR, "lily", ".tmp");
+            tempFile = Files.createTempFile(dataDir, "lily", ".tmp");
             Files.write(tempFile, taskRecords, StandardCharsets.UTF_8);
             moveIntoPlace(tempFile);
         } catch (IOException e) {
             cleanupQuietly(tempFile);
-            throw new IOException("Unable to save tasks to '" + DATA_FILE + "': " + e.getMessage(), e);
+            throw new IOException("Unable to save tasks to '" + dataFile + "': " + e.getMessage(), e);
         }
     }
 
-    private static void createDataDirectory() throws IOException {
-        if (Files.exists(DATA_DIR) && !Files.isDirectory(DATA_DIR)) {
-            throw new FileAlreadyExistsException(DATA_DIR.toString());
+    private void createDataDirectory() throws IOException {
+        if (Files.exists(dataDir) && !Files.isDirectory(dataDir)) {
+            throw new FileAlreadyExistsException(dataDir.toString());
         }
-        Files.createDirectories(DATA_DIR);
+        Files.createDirectories(dataDir);
     }
 
-    private static void moveIntoPlace(Path tempFile) throws IOException {
+    private void moveIntoPlace(Path tempFile) throws IOException {
         try {
-            Files.move(tempFile, DATA_FILE,
+            Files.move(tempFile, dataFile,
                     StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
         } catch (java.nio.file.AtomicMoveNotSupportedException e) {
             // Some filesystems (e.g. certain network drives) don't support atomic moves.
             // Fall back to a plain (non-atomic) replace rather than failing the save.
-            Files.move(tempFile, DATA_FILE, StandardCopyOption.REPLACE_EXISTING);
+            Files.move(tempFile, dataFile, StandardCopyOption.REPLACE_EXISTING);
         }
     }
 
-    private static void cleanupQuietly(Path tempFile) {
+    private void cleanupQuietly(Path tempFile) {
         if (tempFile == null) {
             return;
         }
@@ -135,20 +150,20 @@ public class Storage {
      *
      * @return the tasks reconstructed from the data file (possibly empty)
      */
-    public static List<Task> loadTasks() {
-        if (Files.notExists(DATA_FILE)) {
+    public List<Task> load() {
+        if (Files.notExists(dataFile)) {
             return new ArrayList<>();
         }
 
-        if (!Files.isRegularFile(DATA_FILE)) {
-            System.out.println("[Warning] '" + DATA_FILE
+        if (!Files.isRegularFile(dataFile)) {
+            System.out.println("[Warning] '" + dataFile
                     + "' is not a regular file; starting with an empty task list.");
             return new ArrayList<>();
         }
 
         List<String> lines;
         try {
-            lines = Files.readAllLines(DATA_FILE, StandardCharsets.UTF_8);
+            lines = Files.readAllLines(dataFile, StandardCharsets.UTF_8);
         } catch (MalformedInputException e) {
             backupCorruptedFile("not valid UTF-8 text");
             return new ArrayList<>();
@@ -169,7 +184,7 @@ public class Storage {
                 tasks.add(parseTask(taskRecord));
             } catch (LilyException e) {
                 System.out.println("[Warning] Skipping corrupted entry on line " + lineNumber
-                        + " of '" + DATA_FILE + "': " + e.getMessage());
+                        + " of '" + dataFile + "': " + e.getMessage());
                 skippedCount++;
             }
         }
@@ -185,16 +200,16 @@ public class Storage {
      * Moves an unreadable data file aside (with a timestamped suffix) so a fresh,
      * empty save file can take its place instead of the chatbot refusing to start.
      */
-    private static void backupCorruptedFile(String reason) {
+    private void backupCorruptedFile(String reason) {
         String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"));
-        Path backup = DATA_DIR.resolve("lily.txt.corrupted-" + timestamp);
+        Path backup = dataDir.resolve(dataFile.getFileName() + ".corrupted-" + timestamp);
         try {
-            Files.move(DATA_FILE, backup, StandardCopyOption.REPLACE_EXISTING);
-            System.out.println("[Warning] Could not read '" + DATA_FILE + "' (" + reason
+            Files.move(dataFile, backup, StandardCopyOption.REPLACE_EXISTING);
+            System.out.println("[Warning] Could not read '" + dataFile + "' (" + reason
                     + "). The unreadable file was backed up to '" + backup
                     + "' and Lily is starting with an empty task list.");
         } catch (IOException moveFailed) {
-            System.out.println("[Warning] Could not read '" + DATA_FILE + "' (" + reason
+            System.out.println("[Warning] Could not read '" + dataFile + "' (" + reason
                     + "), and it could not be backed up either (" + moveFailed.getMessage()
                     + "). Starting with an empty task list; the file was left untouched.");
         }
