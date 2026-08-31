@@ -3,18 +3,30 @@ import java.io.IOException;
 /** Runs Lily's command-line task manager. */
 public class Lily {
 
-    public static void main(String[] args) {
-        Ui ui = new Ui();
-        Storage storage = new Storage("data/lily.txt");
+    private final Storage storage;
+    private final TaskList tasks;
+    private final Ui ui;
+
+    /**
+     * Sets up Lily against the given save-file path, loading any tasks already saved
+     * there.
+     *
+     * @param filePath path to the save file, e.g. {@code "data/lily.txt"}
+     */
+    public Lily(String filePath) {
+        ui = new Ui();
+        storage = new Storage(filePath);
         // load() never throws: a missing, unreadable, or partially corrupted save file is
         // handled internally (with a printed warning) so startup always succeeds.
-        TaskList tasks = new TaskList(storage.load());
+        tasks = new TaskList(storage.load());
+    }
 
+    /** Runs the read-command/act/respond loop until the user says {@code bye}. */
+    public void run() {
         ui.showWelcome();
 
         while (true) {
-            String userInput;
-            userInput = ui.readCommand();
+            String userInput = ui.readCommand();
             if (userInput == null) {
                 break;
             }
@@ -37,26 +49,26 @@ public class Lily {
                     if (argument.isEmpty()) {
                         throw new LilyException("Please provide a task number to mark, e.g. \"mark 2\".");
                     }
-                    taskListChanged = markTask(ui, tasks, argument);
+                    taskListChanged = markTask(argument);
                 } else if (command.equals("unmark")) {
                     if (argument.isEmpty()) {
                         throw new LilyException("Please provide a task number to unmark, e.g. \"unmark 2\".");
                     }
-                    taskListChanged = unmarkTask(ui, tasks, argument);
+                    taskListChanged = unmarkTask(argument);
                 } else if (command.equals("todo")) {
-                    addTodo(ui, tasks, userInput);
+                    addTodo(userInput);
                     taskListChanged = true;
                 } else if (command.equals("deadline")) {
-                    addDeadline(ui, tasks, userInput);
+                    addDeadline(userInput);
                     taskListChanged = true;
                 } else if (command.equals("event")) {
-                    addEvent(ui, tasks, userInput);
+                    addEvent(userInput);
                     taskListChanged = true;
                 } else if (command.equals("delete")) {
                     if (argument.isEmpty()) {
                         throw new LilyException("Please provide a task number to delete, e.g. \"delete 2\".");
                     }
-                    taskListChanged = deleteTask(ui, tasks, argument);
+                    taskListChanged = deleteTask(argument);
                 } else {
                     ui.showInvalidCommand();
                 }
@@ -80,7 +92,7 @@ public class Lily {
     }
 
     /** Marks the requested task as done and reports whether it was found. */
-    public static boolean markTask(Ui ui, TaskList tasks, String taskNum) {
+    private boolean markTask(String taskNum) {
         int taskIndex;
         try {
             taskIndex = Parser.parseTaskIndex(taskNum);
@@ -99,7 +111,7 @@ public class Lily {
     }
 
     /** Marks the requested task as not done and reports whether it was found. */
-    public static boolean unmarkTask(Ui ui, TaskList tasks, String taskNum) {
+    private boolean unmarkTask(String taskNum) {
         int taskIndex;
         try {
             taskIndex = Parser.parseTaskIndex(taskNum);
@@ -117,26 +129,26 @@ public class Lily {
         return true;
     }
 
-    public static void addTodo(Ui ui, TaskList tasks, String userInput) throws LilyException {
+    private void addTodo(String userInput) throws LilyException {
         Task newTask = Parser.parseTodo(userInput);
         tasks.add(newTask);
         ui.showTaskAdded(newTask, tasks);
     }
 
-    public static void addDeadline(Ui ui, TaskList tasks, String userInput) throws LilyException {
+    private void addDeadline(String userInput) throws LilyException {
         Task newTask = Parser.parseDeadline(userInput);
         tasks.add(newTask);
         ui.showTaskAdded(newTask, tasks);
     }
 
-    public static void addEvent(Ui ui, TaskList tasks, String userInput) throws LilyException {
+    private void addEvent(String userInput) throws LilyException {
         Task newTask = Parser.parseEvent(userInput);
         tasks.add(newTask);
         ui.showTaskAdded(newTask, tasks);
     }
 
     /** Removes the requested task and reports whether the task list changed. */
-    public static boolean deleteTask(Ui ui, TaskList tasks, String argument) {
+    private boolean deleteTask(String argument) {
         int taskIndex;
         try {
             taskIndex = Parser.parseTaskIndex(argument);
@@ -152,6 +164,10 @@ public class Lily {
         tasks.remove(taskIndex);
         ui.showTaskDeleted(task, tasks);
         return true;
+    }
+
+    public static void main(String[] args) {
+        new Lily("data/lily.txt").run();
     }
 
 }
