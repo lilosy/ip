@@ -1,4 +1,13 @@
+package lily;
 import java.io.IOException;
+
+import lily.ui.Ui;
+import lily.storage.Storage;
+import lily.task.Task;
+import lily.task.TaskList;
+import lily.parser.Parser;
+import lily.exception.LilyException;
+
 
 /** Runs Lily's command-line task manager. */
 public class Lily {

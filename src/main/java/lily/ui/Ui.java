@@ -1,5 +1,8 @@
+package lily.ui;
 import java.util.NoSuchElementException;
 import java.util.Scanner;
+import lily.task.Task;
+import lily.task.TaskList;
 
 /** Handles all console input and output for Lily. */
 public class Ui {

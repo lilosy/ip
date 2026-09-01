@@ -1,4 +1,13 @@
+package lily.parser;
 import java.time.LocalDateTime;
+
+import lily.task.Task;
+import lily.task.ToDo;
+import lily.task.Deadline;
+import lily.task.Event;
+import lily.exception.LilyException;
+import lily.task.TaskList;
+import lily.ui.Ui;
 
 /**
  * Makes sense of raw command text typed by the user.
