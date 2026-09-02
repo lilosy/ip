@@ -11,17 +11,25 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 /**
- * Tests {@link TaskList}, the collection every command in the app ultimately reads from
+ * Tests {@link TaskList}, the collection every command in the app ultimately
+ * reads from
  * or writes to.
  *
- * <p>Individually, most of its methods are thin one-line delegations to {@link
- * ArrayList}, which would ordinarily make them low-value to test. What makes this class
- * worth covering thoroughly is that it is the single shared piece of state the whole
- * application depends on, and it has two behaviours easy to silently get wrong in a
+ * <p>
+ * Individually, most of its methods are thin one-line delegations to {@link
+ * ArrayList}, which would ordinarily make them low-value to test. What makes
+ * this class
+ * worth covering thoroughly is that it is the single shared piece of state the
+ * whole
+ * application depends on, and it has two behaviours easy to silently get wrong
+ * in a
  * future refactor: the defensive copying in its constructor and {@link
- * TaskList#toList()} (so a caller can never mutate Lily's live task list through a
- * side door), and the boundary logic in {@link TaskList#containsIndex(int)} that every
- * "mark"/"unmark"/"delete" command relies on to safely reject an out-of-range index.
+ * TaskList#toList()} (so a caller can never mutate Lily's live task list
+ * through a
+ * side door), and the boundary logic in {@link TaskList#containsIndex(int)}
+ * that every
+ * "mark"/"unmark"/"delete" command relies on to safely reject an out-of-range
+ * index.
  */
 public class TaskListTest {
 
@@ -125,7 +133,8 @@ public class TaskListTest {
         assertThrows(IndexOutOfBoundsException.class, () -> tasks.mark(0));
     }
 
-    // ----- containsIndex: boundary logic every mark/unmark/delete command relies on -----
+    // ----- containsIndex: boundary logic every mark/unmark/delete command relies
+    // on -----
 
     @Test
     public void containsIndex_negativeIndex_returnsFalse() {
@@ -211,5 +220,19 @@ public class TaskListTest {
         snapshot.add(new ToDo("b - added to snapshot only"));
 
         assertEquals(1, tasks.size());
+    }
+
+    @Test
+    public void findTasks_keywordMatchesDescription_returnsMatchingTasksOnly() {
+        TaskList tasks = new TaskList();
+        tasks.add(new ToDo("read book"));
+        tasks.add(new ToDo("write code"));
+        tasks.add(new Deadline("return book", java.time.LocalDateTime.of(2019, 12, 2, 18, 0)));
+
+        List<Task> matches = tasks.findTasks("book");
+
+        assertEquals(2, matches.size());
+        assertEquals("read book", matches.get(0).getDescription());
+        assertEquals("return book", matches.get(1).getDescription());
     }
 }

@@ -23,6 +23,11 @@ public class Task {
         this.isDone = false;
     }
 
+    /** Returns the task description. */
+    public String getDescription() {
+        return description;
+    }
+
     /** Returns this task as a record suitable for saving to disk. */
     public String toFileString() {
         return "T | " + (isDone ? "1" : "0") + " | " + Storage.escapeField(description);

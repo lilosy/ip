@@ -1,13 +1,15 @@
 package lily;
+
 import java.io.IOException;
 
-import lily.ui.Ui;
+import java.util.List;
+
+import lily.exception.LilyException;
+import lily.parser.Parser;
 import lily.storage.Storage;
 import lily.task.Task;
 import lily.task.TaskList;
-import lily.parser.Parser;
-import lily.exception.LilyException;
-
+import lily.ui.Ui;
 
 /** Runs Lily's command-line task manager. */
 public class Lily {
@@ -17,7 +19,8 @@ public class Lily {
     private final Ui ui;
 
     /**
-     * Sets up Lily against the given save-file path, loading any tasks already saved
+     * Sets up Lily against the given save-file path, loading any tasks already
+     * saved
      * there.
      *
      * @param filePath path to the save file, e.g. {@code "data/lily.txt"}
@@ -25,7 +28,8 @@ public class Lily {
     public Lily(String filePath) {
         ui = new Ui();
         storage = new Storage(filePath);
-        // load() never throws: a missing, unreadable, or partially corrupted save file is
+        // load() never throws: a missing, unreadable, or partially corrupted save file
+        // is
         // handled internally (with a printed warning) so startup always succeeds.
         tasks = new TaskList(storage.load());
     }
@@ -78,6 +82,11 @@ public class Lily {
                         throw new LilyException("Please provide a task number to delete, e.g. \"delete 2\".");
                     }
                     taskListChanged = deleteTask(argument);
+                } else if (command.equals("find")) {
+                    if (argument.isEmpty()) {
+                        throw new LilyException("Please provide a keyword to search for.");
+                    }
+                    findTask(argument);
                 } else {
                     ui.showInvalidCommand();
                 }
@@ -154,6 +163,14 @@ public class Lily {
         Task newTask = Parser.parseEvent(userInput);
         tasks.add(newTask);
         ui.showTaskAdded(newTask, tasks);
+    }
+
+    /**
+     * Finds tasks whose descriptions contain the given keyword and displays them.
+     */
+    private void findTask(String keyword) {
+        List<Task> matchingTasks = tasks.findTasks(keyword);
+        ui.showMatchingTasks(matchingTasks);
     }
 
     /** Removes the requested task and reports whether the task list changed. */

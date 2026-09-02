@@ -1,12 +1,17 @@
 package lily.task;
+
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Owns Lily's ordered collection of tasks and provides its basic task operations.
+ * Owns Lily's ordered collection of tasks and provides its basic task
+ * operations.
  *
- * <p>The class deliberately does not print messages. Command-specific feedback belongs to
- * the user-interface layer, while this class focuses only on changing or retrieving tasks.
+ * <p>
+ * The class deliberately does not print messages. Command-specific feedback
+ * belongs to
+ * the user-interface layer, while this class focuses only on changing or
+ * retrieving tasks.
  */
 public class TaskList {
     private final List<Task> tasks;
@@ -59,5 +64,23 @@ public class TaskList {
     /** Returns a snapshot suitable for passing to persistence code. */
     public List<Task> toList() {
         return new ArrayList<>(tasks);
+    }
+
+    /**
+     * Returns all tasks whose descriptions contain the given keyword
+     * (case-insensitive).
+     */
+    public List<Task> findTasks(String keyword) {
+        List<Task> matchingTasks = new ArrayList<>();
+        String lowerCaseKeyword = keyword.toLowerCase();
+
+        for (Task task : tasks) {
+            String taskDescription = task.getDescription().toLowerCase();
+            if (taskDescription.contains(lowerCaseKeyword)) {
+                matchingTasks.add(task);
+            }
+        }
+
+        return matchingTasks;
     }
 }
