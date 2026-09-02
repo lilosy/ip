@@ -1,5 +1,7 @@
 package lily.task;
 
+import lily.storage.Storage;
+
 public class Task {
     protected String description;
     protected boolean isDone;
@@ -23,7 +25,7 @@ public class Task {
 
     /** Returns this task as a record suitable for saving to disk. */
     public String toFileString() {
-        return "T | " + (isDone ? "1" : "0") + " | " + description;
+        return "T | " + (isDone ? "1" : "0") + " | " + Storage.escapeField(description);
     }
 
     @Override
