@@ -2,6 +2,8 @@ package lily;
 
 import java.io.IOException;
 
+import java.util.List;
+
 import lily.exception.LilyException;
 import lily.parser.Parser;
 import lily.storage.Storage;
@@ -83,6 +85,11 @@ public class Lily {
                                 "Please provide a task number to delete, e.g. \"delete 2\".");
                     }
                     taskListChanged = deleteTask(argument);
+                } else if (command.equals("find")) {
+                    if (argument.isEmpty()) {
+                        throw new LilyException("Please provide a keyword to search for.");
+                    }
+                    findTask(argument);
                 } else {
                     ui.showInvalidCommand();
                 }
@@ -163,6 +170,14 @@ public class Lily {
         Task newTask = Parser.parseEvent(userInput);
         tasks.add(newTask);
         ui.showTaskAdded(newTask, tasks);
+    }
+
+    /**
+     * Finds tasks whose descriptions contain the given keyword and displays them.
+     */
+    private void findTask(String keyword) {
+        List<Task> matchingTasks = tasks.findTasks(keyword);
+        ui.showMatchingTasks(matchingTasks);
     }
 
     /** Removes the requested task and reports whether the task list changed. */

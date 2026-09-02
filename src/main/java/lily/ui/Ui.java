@@ -61,6 +61,19 @@ public class Ui {
         }
     }
 
+    /** Shows all tasks matching the given search keyword. */
+    public void showMatchingTasks(java.util.List<Task> matchingTasks) {
+        if (matchingTasks.isEmpty()) {
+            System.out.println("There are no matching tasks in your list.");
+            return;
+        }
+
+        System.out.println("Here are the matching tasks in your list:");
+        for (int i = 0; i < matchingTasks.size(); i++) {
+            System.out.println(String.format("%d.%s", i + 1, matchingTasks.get(i)));
+        }
+    }
+
     /** Shows confirmation that a task was marked as done. */
     public void showTaskMarked(Task task) {
         System.out.println("Nice! I've marked this task as done:");
