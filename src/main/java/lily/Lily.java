@@ -1,23 +1,23 @@
 package lily;
+
 import java.io.IOException;
 
-import lily.ui.Ui;
+import lily.exception.LilyException;
+import lily.parser.Parser;
 import lily.storage.Storage;
 import lily.task.Task;
 import lily.task.TaskList;
-import lily.parser.Parser;
-import lily.exception.LilyException;
-
+import lily.ui.Ui;
 
 /** Runs Lily's command-line task manager. */
 public class Lily {
-
     private final Storage storage;
     private final TaskList tasks;
     private final Ui ui;
 
     /**
-     * Sets up Lily against the given save-file path, loading any tasks already saved
+     * Sets up Lily against the given save-file path, loading any tasks already
+     * saved
      * there.
      *
      * @param filePath path to the save file, e.g. {@code "data/lily.txt"}
@@ -25,7 +25,8 @@ public class Lily {
     public Lily(String filePath) {
         ui = new Ui();
         storage = new Storage(filePath);
-        // load() never throws: a missing, unreadable, or partially corrupted save file is
+        // load() never throws: a missing, unreadable, or partially corrupted save file
+        // is
         // handled internally (with a printed warning) so startup always succeeds.
         tasks = new TaskList(storage.load());
     }
@@ -48,6 +49,7 @@ public class Lily {
             if (userInput.equals("bye")) {
                 break;
             }
+
             String command = Parser.getCommandWord(userInput);
             String argument = Parser.getArguments(userInput);
             try {
@@ -56,12 +58,14 @@ public class Lily {
                     ui.showTaskList(tasks);
                 } else if (command.equals("mark")) {
                     if (argument.isEmpty()) {
-                        throw new LilyException("Please provide a task number to mark, e.g. \"mark 2\".");
+                        throw new LilyException(
+                                "Please provide a task number to mark, e.g. \"mark 2\".");
                     }
                     taskListChanged = markTask(argument);
                 } else if (command.equals("unmark")) {
                     if (argument.isEmpty()) {
-                        throw new LilyException("Please provide a task number to unmark, e.g. \"unmark 2\".");
+                        throw new LilyException(
+                                "Please provide a task number to unmark, e.g. \"unmark 2\".");
                     }
                     taskListChanged = unmarkTask(argument);
                 } else if (command.equals("todo")) {
@@ -75,12 +79,14 @@ public class Lily {
                     taskListChanged = true;
                 } else if (command.equals("delete")) {
                     if (argument.isEmpty()) {
-                        throw new LilyException("Please provide a task number to delete, e.g. \"delete 2\".");
+                        throw new LilyException(
+                                "Please provide a task number to delete, e.g. \"delete 2\".");
                     }
                     taskListChanged = deleteTask(argument);
                 } else {
                     ui.showInvalidCommand();
                 }
+
                 if (taskListChanged) {
                     storage.save(tasks.toList());
                 }
@@ -89,12 +95,11 @@ public class Lily {
                 ui.showError(e);
                 ui.showDivider();
             } catch (RuntimeException e) {
-                // Last-resort safety net: an unexpected bug in one command should
-                // never crash the whole session or lose the in-memory task list.
+                // Last-resort safety net: an unexpected bug in one command should never crash
+                // the whole session or lose the in-memory task list.
                 ui.showUnexpectedError(e);
                 ui.showDivider();
             }
-
         }
 
         ui.showGoodbye();
@@ -109,10 +114,12 @@ public class Lily {
             ui.showInvalidTaskNumber();
             return false;
         }
+
         if (!tasks.containsIndex(taskIndex)) {
             ui.showMissingTask();
             return false;
         }
+
         tasks.mark(taskIndex);
         Task task = tasks.get(taskIndex);
         ui.showTaskMarked(task);
@@ -128,10 +135,12 @@ public class Lily {
             ui.showInvalidTaskNumber();
             return false;
         }
+
         if (!tasks.containsIndex(taskIndex)) {
             ui.showMissingTask();
             return false;
         }
+
         tasks.unmark(taskIndex);
         Task task = tasks.get(taskIndex);
         ui.showTaskUnmarked(task);
@@ -165,10 +174,12 @@ public class Lily {
             ui.showInvalidTaskNumber();
             return false;
         }
+
         if (!tasks.containsIndex(taskIndex)) {
             ui.showMissingTask();
             return false;
         }
+
         Task task = tasks.get(taskIndex);
         tasks.remove(taskIndex);
         ui.showTaskDeleted(task, tasks);
@@ -178,5 +189,4 @@ public class Lily {
     public static void main(String[] args) {
         new Lily("data/lily.txt").run();
     }
-
 }

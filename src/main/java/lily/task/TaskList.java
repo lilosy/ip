@@ -1,12 +1,17 @@
 package lily.task;
+
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Owns Lily's ordered collection of tasks and provides its basic task operations.
+ * Owns Lily's ordered collection of tasks and provides its basic task
+ * operations.
  *
- * <p>The class deliberately does not print messages. Command-specific feedback belongs to
- * the user-interface layer, while this class focuses only on changing or retrieving tasks.
+ * <p>
+ * The class deliberately does not print messages. Command-specific feedback
+ * belongs to
+ * the user-interface layer, while this class focuses only on changing or
+ * retrieving tasks.
  */
 public class TaskList {
     private final List<Task> tasks;

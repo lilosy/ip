@@ -1,4 +1,5 @@
 package lily.storage;
+
 import java.io.IOException;
 import java.nio.charset.MalformedInputException;
 import java.nio.charset.StandardCharsets;
@@ -12,22 +13,29 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
 
-import lily.task.Task;
-import lily.task.ToDo;
-import lily.task.Deadline;
-import lily.task.Event;
 import lily.exception.LilyException;
 import lily.parser.DateTimeParser;
+import lily.task.Deadline;
+import lily.task.Event;
+import lily.task.Task;
+import lily.task.ToDo;
+
 /**
  * Saves and loads the task list from a data file on disk.
  *
- * <p>Each instance is bound to one file path, supplied to the constructor (e.g.
- * {@code new Storage("data/lily.txt")}), so a caller could in principle point Lily at a
+ * <p>
+ * Each instance is bound to one file path, supplied to the constructor (e.g.
+ * {@code new Storage("data/lily.txt")}), so a caller could in principle point
+ * Lily at a
  * different save file without changing this class.
  *
- * <p>Loading is designed to never crash the application: unreadable files are backed up
- * and a fresh list is returned, and individual corrupted lines are skipped (with a
- * warning) rather than aborting the whole load. Saving is done atomically so a crash or
+ * <p>
+ * Loading is designed to never crash the application: unreadable files are
+ * backed up
+ * and a fresh list is returned, and individual corrupted lines are skipped
+ * (with a
+ * warning) rather than aborting the whole load. Saving is done atomically so a
+ * crash or
  * power loss mid-write cannot leave behind a half-written, corrupted data file.
  */
 public class Storage {
@@ -41,7 +49,8 @@ public class Storage {
     /**
      * Creates a Storage bound to the given file path.
      *
-     * @param filePath path (relative or absolute) to the save file, e.g. {@code "data/lily.txt"}
+     * @param filePath path (relative or absolute) to the save file, e.g.
+     *                 {@code "data/lily.txt"}
      */
     public Storage(String filePath) {
         this.dataFile = Path.of(filePath);
@@ -50,11 +59,15 @@ public class Storage {
     }
 
     /**
-     * Escapes a field so it can safely be embedded in a {@value #DELIMITER}-separated
+     * Escapes a field so it can safely be embedded in a
+     * {@value #DELIMITER}-separated
      * record even if it contains a backslash or pipe character.
      *
-     * <p>This stays a static utility (rather than an instance method) because escaping is
-     * a pure text transformation that has nothing to do with any particular file; {@link
+     * <p>
+     * This stays a static utility (rather than an instance method) because escaping
+     * is
+     * a pure text transformation that has nothing to do with any particular file;
+     * {@link
      * Task} subclasses call it directly while building their own save records.
      */
     public static String escapeField(String field) {
@@ -72,12 +85,14 @@ public class Storage {
     /**
      * Replaces the data file with one parseable record for every task.
      *
-     * <p>The write is atomic: tasks are first written to a temporary file in the same
+     * <p>
+     * The write is atomic: tasks are first written to a temporary file in the same
      * directory, then moved into place, so a crash partway through a write cannot
      * corrupt or truncate the existing save file.
      *
      * @param tasks the tasks to save; must not be {@code null}, but may be empty
-     * @throws IOException if the data directory or file cannot be created or written
+     * @throws IOException if the data directory or file cannot be created or
+     *                     written
      */
     public void save(List<Task> tasks) throws IOException {
         if (tasks == null) {
@@ -142,17 +157,20 @@ public class Storage {
     }
 
     /**
-     * Loads saved tasks, or returns an empty list when Lily has not saved any tasks yet.
+     * Loads saved tasks, or returns an empty list when Lily has not saved any tasks
+     * yet.
      *
-     * <p>This method is deliberately tolerant of a damaged save file so a corrupted or
+     * <p>
+     * This method is deliberately tolerant of a damaged save file so a corrupted or
      * partially-written file never prevents the chatbot from starting up:
      * <ul>
-     *     <li>a missing file, or a missing data directory, simply yields an empty list;</li>
-     *     <li>individual malformed lines are skipped (with a warning printed) so the
-     *     rest of a mostly-valid file still loads;</li>
-     *     <li>if the file cannot be read at all (bad permissions, wrong encoding,
-     *     binary garbage, etc.), it is renamed aside as a timestamped backup and an
-     *     empty list is returned so the user can keep using Lily.</li>
+     * <li>a missing file, or a missing data directory, simply yields an empty
+     * list;</li>
+     * <li>individual malformed lines are skipped (with a warning printed) so the
+     * rest of a mostly-valid file still loads;</li>
+     * <li>if the file cannot be read at all (bad permissions, wrong encoding,
+     * binary garbage, etc.), it is renamed aside as a timestamped backup and an
+     * empty list is returned so the user can keep using Lily.</li>
      * </ul>
      *
      * @return the tasks reconstructed from the data file (possibly empty)
@@ -225,8 +243,9 @@ public class Storage {
     /**
      * Reconstructs one task from a record created by {@link Task#toFileString()}.
      *
-     * @throws LilyException if the record is missing fields, has an unknown task type,
-     *                        an invalid done-flag, or blank required fields
+     * @throws LilyException if the record is missing fields, has an unknown task
+     *                       type,
+     *                       an invalid done-flag, or blank required fields
      */
     private static Task parseTask(String taskRecord) throws LilyException {
         String[] rawFields = DELIMITER_SPLIT_PATTERN.split(taskRecord, -1);

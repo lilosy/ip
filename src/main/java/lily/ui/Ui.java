@@ -1,6 +1,8 @@
 package lily.ui;
+
 import java.util.NoSuchElementException;
 import java.util.Scanner;
+
 import lily.task.Task;
 import lily.task.TaskList;
 
@@ -30,7 +32,9 @@ public class Ui {
         showDivider();
     }
 
-    /** Reads and trims one command, or returns {@code null} when input has ended. */
+    /**
+     * Reads and trims one command, or returns {@code null} when input has ended.
+     */
     public String readCommand() {
         try {
             return scanner.nextLine().trim();
@@ -107,8 +111,11 @@ public class Ui {
         System.out.println("Please provide a valid task number.");
     }
 
-    /** Shows an unexpected command-processing failure without ending the session. */
+    /**
+     * Shows an unexpected command-processing failure without ending the session.
+     */
     public void showUnexpectedError(RuntimeException exception) {
-        System.out.println("Something went wrong handling that command: " + exception.getMessage());
+        System.out.println(
+                "Something went wrong handling that command: " + exception.getMessage());
     }
 }
