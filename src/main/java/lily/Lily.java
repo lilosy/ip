@@ -33,6 +33,124 @@ public class Lily {
         tasks = new TaskList(storage.load());
     }
 
+    /**
+     * Processes one GUI command and returns Lily's reply for display in a dialog
+     * box. Changes to the task list are saved before the reply is returned.
+     *
+     * @param input command typed by the user
+     * @return a human-readable reply
+     */
+    public String getResponse(String input) {
+        String userInput = input == null ? "" : input.trim();
+        if (userInput.isEmpty()) {
+            return "Please enter a command.";
+        }
+        if (userInput.equals("bye")) {
+            return "Bye! See you soon :)";
+        }
+
+        try {
+            String command = Parser.getCommandWord(userInput);
+            String argument = Parser.getArguments(userInput);
+            boolean taskListChanged = false;
+            String response;
+            switch (command) {
+            case "list":
+                response = formatTaskList(tasks.toList(), "Here are the tasks in your list:");
+                break;
+            case "mark":
+                taskListChanged = markTaskForGui(argument);
+                response = taskListChanged ? "Nice! I've marked this task as done:\n  "
+                        + tasks.get(Parser.parseTaskIndex(argument)) : "That task number does not exist.";
+                break;
+            case "unmark":
+                taskListChanged = unmarkTaskForGui(argument);
+                response = taskListChanged ? "OK, I've marked this task as not done yet:\n  "
+                        + tasks.get(Parser.parseTaskIndex(argument)) : "That task number does not exist.";
+                break;
+            case "todo":
+            case "deadline":
+            case "event":
+                Task task = command.equals("todo") ? Parser.parseTodo(userInput)
+                        : command.equals("deadline") ? Parser.parseDeadline(userInput)
+                        : Parser.parseEvent(userInput);
+                tasks.add(task);
+                taskListChanged = true;
+                response = "Got it. I've added this task:\n  " + task + "\nNow you have "
+                        + tasks.size() + " tasks in the list.";
+                break;
+            case "delete":
+                response = deleteTaskForGui(argument);
+                taskListChanged = !response.equals("That task number does not exist.");
+                break;
+            case "find":
+                if (argument.isEmpty()) {
+                    throw new LilyException("Please provide a keyword to search for.");
+                }
+                response = formatTaskList(tasks.findTasks(argument), "Here are the matching tasks in your list:");
+                break;
+            default:
+                response = "I don't recognise that command.";
+            }
+            if (taskListChanged) {
+                storage.save(tasks.toList());
+            }
+            return response;
+        } catch (LilyException | IOException e) {
+            return e.getMessage();
+        } catch (RuntimeException e) {
+            return "Something went wrong handling that command: " + e.getMessage();
+        }
+    }
+
+    private boolean markTaskForGui(String argument) throws LilyException {
+        if (argument.isEmpty()) {
+            throw new LilyException("Please provide a task number to mark, e.g. \"mark 2\".");
+        }
+        int index = Parser.parseTaskIndex(argument);
+        if (!tasks.containsIndex(index)) {
+            return false;
+        }
+        tasks.mark(index);
+        return true;
+    }
+
+    private boolean unmarkTaskForGui(String argument) throws LilyException {
+        if (argument.isEmpty()) {
+            throw new LilyException("Please provide a task number to unmark, e.g. \"unmark 2\".");
+        }
+        int index = Parser.parseTaskIndex(argument);
+        if (!tasks.containsIndex(index)) {
+            return false;
+        }
+        tasks.unmark(index);
+        return true;
+    }
+
+    private String deleteTaskForGui(String argument) throws LilyException {
+        if (argument.isEmpty()) {
+            throw new LilyException("Please provide a task number to delete, e.g. \"delete 2\".");
+        }
+        int index = Parser.parseTaskIndex(argument);
+        if (!tasks.containsIndex(index)) {
+            return "That task number does not exist.";
+        }
+        Task removed = tasks.remove(index);
+        return "OK! I've removed this task:\n  " + removed + "\nNow you have "
+                + tasks.size() + " tasks in the list.";
+    }
+
+    private String formatTaskList(List<Task> taskList, String heading) {
+        if (taskList.isEmpty()) {
+            return "There are no matching tasks in your list.";
+        }
+        StringBuilder response = new StringBuilder(heading);
+        for (int i = 0; i < taskList.size(); i++) {
+            response.append("\n").append(i + 1).append(". ").append(taskList.get(i));
+        }
+        return response.toString();
+    }
+
     /** Runs the read-command/act/respond loop until the user says {@code bye}. */
     public void run() {
         ui.showWelcome();
