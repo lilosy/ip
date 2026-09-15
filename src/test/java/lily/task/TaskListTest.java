@@ -82,10 +82,10 @@ public class TaskListTest {
     }
 
     @Test
-    public void get_indexOutOfRange_exceptionThrown() {
+    public void get_indexOutOfRange_assertionErrorThrown() {
         TaskList tasks = new TaskList();
         tasks.add(new ToDo("only task"));
-        assertThrows(IndexOutOfBoundsException.class, () -> tasks.get(1));
+        assertThrows(AssertionError.class, () -> tasks.get(1));
     }
 
     @Test
@@ -101,9 +101,9 @@ public class TaskListTest {
     }
 
     @Test
-    public void remove_indexOutOfRange_exceptionThrown() {
+    public void remove_indexOutOfRange_assertionErrorThrown() {
         TaskList tasks = new TaskList();
-        assertThrows(IndexOutOfBoundsException.class, () -> tasks.remove(0));
+        assertThrows(AssertionError.class, () -> tasks.remove(0));
     }
 
     @Test
@@ -128,9 +128,9 @@ public class TaskListTest {
     }
 
     @Test
-    public void mark_indexOutOfRange_exceptionThrown() {
+    public void mark_indexOutOfRange_assertionErrorThrown() {
         TaskList tasks = new TaskList();
-        assertThrows(IndexOutOfBoundsException.class, () -> tasks.mark(0));
+        assertThrows(AssertionError.class, () -> tasks.mark(0));
     }
 
     // ----- containsIndex: boundary logic every mark/unmark/delete command relies

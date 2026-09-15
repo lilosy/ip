@@ -17,6 +17,8 @@ public class Deadline extends Task {
      */
     public Deadline(String description, LocalDateTime by) {
         super(description);
+        // Parsers and storage reconstruction must supply a concrete due time.
+        assert by != null : "A deadline must have a due time";
         this.by = by;
     }
 
