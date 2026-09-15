@@ -54,66 +54,90 @@ public class Lily {
         }
 
         try {
-            String command = Parser.getCommandWord(userInput);
-            String argument = Parser.getArguments(userInput);
-            boolean taskListChanged = false;
-            String response;
-            switch (command) {
-            case "list":
-                response = formatTaskList(tasks.toList(), "Here are the tasks in your list:");
-                break;
-            case "mark":
-                int markIndex = parseRequiredTaskIndex(argument, "mark");
-                taskListChanged = tasks.containsIndex(markIndex);
-                response = taskListChanged ? "Nice! I've marked this task as done:\n  "
-                        + markTask(markIndex) : "That task number does not exist.";
-                break;
-            case "unmark":
-                int unmarkIndex = parseRequiredTaskIndex(argument, "unmark");
-                taskListChanged = tasks.containsIndex(unmarkIndex);
-                response = taskListChanged ? "OK, I've marked this task as not done yet:\n  "
-                        + unmarkTask(unmarkIndex) : "That task number does not exist.";
-                break;
-            case "todo":
-            case "deadline":
-            case "event":
-                Task task = command.equals("todo") ? Parser.parseTodo(userInput)
-                        : command.equals("deadline") ? Parser.parseDeadline(userInput)
-                        : Parser.parseEvent(userInput);
-                tasks.add(task);
-                taskListChanged = true;
-                response = "Got it. I've added this task:\n  " + task + "\nNow you have "
-                        + tasks.size() + " tasks in the list.";
-                break;
-            case "delete":
-                int index = parseRequiredTaskIndex(argument, "delete");
-                if (!tasks.containsIndex(index)) {
-                    response = "That task number does not exist.";
-                    break;
-                }
-                Task removed = tasks.remove(index);
-                taskListChanged = true;
-                response = "OK! I've removed this task:\n  " + removed + "\nNow you have "
-                        + tasks.size() + " tasks in the list.";
-                break;
-            case "find":
-                if (argument.isEmpty()) {
-                    throw new LilyException("Please provide a keyword to search for.");
-                }
-                response = formatTaskList(tasks.findTasks(argument), "Here are the matching tasks in your list:");
-                break;
-            default:
-                response = "I don't recognise that command.";
-            }
-            if (taskListChanged) {
+            CommandResult result = executeCommand(userInput);
+            if (result.changedTaskList()) {
                 storage.save(tasks.toList());
             }
-            return response;
+            return result.response();
         } catch (LilyException | IOException e) {
             return e.getMessage();
         } catch (RuntimeException e) {
             return "Something went wrong handling that command: " + e.getMessage();
         }
+    }
+
+    /** Executes a parsed command without performing persistence. */
+    private CommandResult executeCommand(String userInput) throws LilyException {
+        String command = Parser.getCommandWord(userInput);
+        String argument = Parser.getArguments(userInput);
+        switch (command) {
+        case "list":
+            return unchanged(formatTaskList(tasks.toList(), "Here are the tasks in your list:"));
+        case "mark":
+            return changeTaskStatus(argument, true);
+        case "unmark":
+            return changeTaskStatus(argument, false);
+        case "todo":
+        case "deadline":
+        case "event":
+            return addTask(command, userInput);
+        case "delete":
+            return deleteTask(argument);
+        case "find":
+            return findTasks(argument);
+        default:
+            return unchanged("I don't recognise that command.");
+        }
+    }
+
+    private CommandResult changeTaskStatus(String argument, boolean shouldMarkDone) throws LilyException {
+        String command = shouldMarkDone ? "mark" : "unmark";
+        int index = parseRequiredTaskIndex(argument, command);
+        if (!tasks.containsIndex(index)) {
+            return unchanged("That task number does not exist.");
+        }
+
+        Task task = shouldMarkDone ? markTask(index) : unmarkTask(index);
+        String response = shouldMarkDone ? "Nice! I've marked this task as done:\n  " + task
+                : "OK, I've marked this task as not done yet:\n  " + task;
+        return changed(response);
+    }
+
+    private CommandResult addTask(String command, String userInput) throws LilyException {
+        Task task = switch (command) {
+        case "todo" -> Parser.parseTodo(userInput);
+        case "deadline" -> Parser.parseDeadline(userInput);
+        case "event" -> Parser.parseEvent(userInput);
+        default -> throw new IllegalArgumentException("Unsupported task command: " + command);
+        };
+        tasks.add(task);
+        return changed("Got it. I've added this task:\n  " + task + "\nNow you have "
+                + tasks.size() + " tasks in the list.");
+    }
+
+    private CommandResult deleteTask(String argument) throws LilyException {
+        int index = parseRequiredTaskIndex(argument, "delete");
+        if (!tasks.containsIndex(index)) {
+            return unchanged("That task number does not exist.");
+        }
+        Task removed = tasks.remove(index);
+        return changed("OK! I've removed this task:\n  " + removed + "\nNow you have "
+                + tasks.size() + " tasks in the list.");
+    }
+
+    private CommandResult findTasks(String argument) throws LilyException {
+        if (argument.isEmpty()) {
+            throw new LilyException("Please provide a keyword to search for.");
+        }
+        return unchanged(formatTaskList(tasks.findTasks(argument), "Here are the matching tasks in your list:"));
+    }
+
+    private CommandResult changed(String response) {
+        return new CommandResult(response, true);
+    }
+
+    private CommandResult unchanged(String response) {
+        return new CommandResult(response, false);
     }
 
     private Task markTask(int index) {
@@ -143,6 +167,10 @@ public class Lily {
             response.append("\n").append(i + 1).append(". ").append(taskList.get(i));
         }
         return response.toString();
+    }
+
+    /** Represents a command reply and whether it needs to be saved. */
+    private record CommandResult(String response, boolean changedTaskList) {
     }
 
     /** Runs the read-command/act/respond loop until the user says {@code bye}. */
