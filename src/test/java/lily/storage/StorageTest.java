@@ -219,6 +219,22 @@ public class StorageTest {
     }
 
     @Test
+    public void load_eventEndingBeforeItStarts_lineSkippedRatherThanBreakingEventInvariant(
+            @TempDir Path tempDir) throws IOException {
+        Path file = tempDir.resolve("lily.txt");
+        Files.write(file, List.of(
+                "E | 0 | impossible event | 2019-08-06T16:00 | 2019-08-06T14:00",
+                "T | 0 | still valid"
+        ), StandardCharsets.UTF_8);
+        Storage storage = storageIn(file);
+
+        List<Task> loaded = storage.load();
+
+        assertEquals(1, loaded.size());
+        assertEquals("T | 0 | still valid", loaded.get(0).toFileString());
+    }
+
+    @Test
     public void load_blankLinesInFile_ignoredWithoutBeingCountedAsCorrupted(@TempDir Path tempDir)
             throws IOException {
         Path file = tempDir.resolve("lily.txt");
