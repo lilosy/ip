@@ -106,6 +106,12 @@ public class Storage {
                     + "' exists but is not a directory. Please remove or rename it.", e);
         }
 
+        List<String> taskRecords = serializeTasks(tasks);
+        writeTaskRecordsAtomically(taskRecords);
+    }
+
+    /** Converts each non-null task to the record stored in the data file. */
+    private List<String> serializeTasks(List<Task> tasks) {
         List<String> taskRecords = new ArrayList<>();
         for (Task task : tasks) {
             if (task == null) {
@@ -115,7 +121,11 @@ public class Storage {
             }
             taskRecords.add(task.toFileString());
         }
+        return taskRecords;
+    }
 
+    /** Writes all records to a temporary file before replacing the data file. */
+    private void writeTaskRecordsAtomically(List<String> taskRecords) throws IOException {
         Path tempFile = null;
         try {
             tempFile = Files.createTempFile(dataDir, "lily", ".tmp");
