@@ -118,16 +118,7 @@ public class Parser {
             throw new LilyException("Add a description for the event");
         }
 
-        if (!parts[1].matches(".*\\s/from\\s.*\\s/to\\s.*")) {
-            throw new LilyException(
-                    "Wrong format for event, use this format: "
-                            + "event [event desc] /from [...] /to [...]");
-        }
-
-        String eventTaskDesc = parts[1];
-        String[] eventParts = eventTaskDesc.split(" /from | /to ", 3);
-        // The format check above guarantees description, start, and end fields.
-        assert eventParts.length == 3 : "An event command must split into three fields";
+        String[] eventParts = splitEventDetails(parts[1]);
         String description = eventParts[0].trim();
         if (description.isEmpty()) {
             throw new LilyException("Add a description for the event");
@@ -139,5 +130,15 @@ public class Parser {
             throw new LilyException("The event's 'to' time can't be before its 'from' time.");
         }
         return new Event(description, from, to);
+    }
+
+    /** Validates the event clauses and separates the description, start, and end text. */
+    private static String[] splitEventDetails(String eventDetails) throws LilyException {
+        if (!eventDetails.matches(".*\\s/from\\s.*\\s/to\\s.*")) {
+            throw new LilyException(
+                    "Wrong format for event, use this format: "
+                            + "event [event desc] /from [...] /to [...]");
+        }
+        return eventDetails.split(" /from | /to ", 3);
     }
 }

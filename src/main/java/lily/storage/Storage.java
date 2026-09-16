@@ -106,6 +106,12 @@ public class Storage {
                     + "' exists but is not a directory. Please remove or rename it.", e);
         }
 
+        List<String> taskRecords = serializeTasks(tasks);
+        writeTaskRecordsAtomically(taskRecords);
+    }
+
+    /** Converts each non-null task to the record stored in the data file. */
+    private List<String> serializeTasks(List<Task> tasks) {
         List<String> taskRecords = new ArrayList<>();
         for (Task task : tasks) {
             if (task == null) {
@@ -115,7 +121,11 @@ public class Storage {
             }
             taskRecords.add(task.toFileString());
         }
+        return taskRecords;
+    }
 
+    /** Writes all records to a temporary file before replacing the data file. */
+    private void writeTaskRecordsAtomically(List<String> taskRecords) throws IOException {
         Path tempFile = null;
         try {
             tempFile = Files.createTempFile(dataDir, "lily", ".tmp");
@@ -176,6 +186,14 @@ public class Storage {
      * @return the tasks reconstructed from the data file (possibly empty)
      */
     public List<Task> load() {
+        List<String> taskRecords = readTaskRecords();
+        return parseTaskRecords(taskRecords);
+    }
+
+    /**
+     * Reads the saved records, recovering from an unreadable file by backing it up.
+     */
+    private List<String> readTaskRecords() {
         if (Files.notExists(dataFile)) {
             return new ArrayList<>();
         }
@@ -186,9 +204,8 @@ public class Storage {
             return new ArrayList<>();
         }
 
-        List<String> lines;
         try {
-            lines = Files.readAllLines(dataFile, StandardCharsets.UTF_8);
+            return Files.readAllLines(dataFile, StandardCharsets.UTF_8);
         } catch (MalformedInputException e) {
             backupCorruptedFile("not valid UTF-8 text");
             return new ArrayList<>();
@@ -196,11 +213,14 @@ public class Storage {
             backupCorruptedFile(e.getMessage());
             return new ArrayList<>();
         }
+    }
 
+    /** Parses valid records and reports individual records that cannot be recovered. */
+    private List<Task> parseTaskRecords(List<String> taskRecords) {
         List<Task> tasks = new ArrayList<>();
         int lineNumber = 0;
         int skippedCount = 0;
-        for (String taskRecord : lines) {
+        for (String taskRecord : taskRecords) {
             lineNumber++;
             if (taskRecord == null || taskRecord.isBlank()) {
                 continue;
@@ -254,52 +274,70 @@ public class Storage {
                     + rawFields.length);
         }
 
+        String[] fields = normalizeFields(rawFields);
+        validateDoneFlag(fields[1]);
+        Task task = createTask(fields);
+        restoreDoneState(task, fields[1]);
+        return task;
+    }
+
+    /** Trims and unescapes every field in a saved record. */
+    private static String[] normalizeFields(String[] rawFields) {
         String[] fields = new String[rawFields.length];
         for (int i = 0; i < rawFields.length; i++) {
             fields[i] = unescapeField(rawFields[i].trim());
         }
+        return fields;
+    }
 
-        String type = fields[0];
-        String doneFlag = fields[1];
+    /** Validates the common completion-state field used by every record type. */
+    private static void validateDoneFlag(String doneFlag) throws LilyException {
         if (!doneFlag.equals("0") && !doneFlag.equals("1")) {
             throw new LilyException("done-flag must be '0' or '1', found '" + doneFlag + "'");
         }
+    }
 
-        Task task;
-        switch (type) {
+    /** Creates the correct task subtype after its fields have been normalized. */
+    private static Task createTask(String[] fields) throws LilyException {
+        switch (fields[0]) {
             case "T":
-                requireFieldCount(fields, 3, "todo");
-                requireNonBlank(fields, 2, "description");
-                task = new ToDo(fields[2]);
-                break;
+                return createTodo(fields);
             case "D":
-                requireFieldCount(fields, 4, "deadline");
-                requireNonBlank(fields, 2, "description");
-                requireNonBlank(fields, 3, "'by' date");
-                task = new Deadline(fields[2], DateTimeParser.parseStorageFormat(fields[3]));
-                break;
+                return createDeadline(fields);
             case "E":
-                requireFieldCount(fields, 5, "event");
-                requireNonBlank(fields, 2, "description");
-                requireNonBlank(fields, 3, "'from' time");
-                requireNonBlank(fields, 4, "'to' time");
-                LocalDateTime from = DateTimeParser.parseStorageFormat(fields[3]);
-                LocalDateTime to = DateTimeParser.parseStorageFormat(fields[4]);
-                if (to.isBefore(from)) {
-                    throw new LilyException("event 'to' time cannot be before its 'from' time");
-                }
-                // After validating the persisted range, Event's interval invariant holds.
-                assert !to.isBefore(from) : "Loaded event must not end before it starts";
-                task = new Event(fields[2], from, to);
-                break;
+                return createEvent(fields);
             default:
-                throw new LilyException("unknown task type '" + type + "' (expected T, D, or E)");
+                throw new LilyException("unknown task type '" + fields[0] + "' (expected T, D, or E)");
         }
+    }
 
+    private static Task createTodo(String[] fields) throws LilyException {
+        requireFieldCount(fields, 3, "todo");
+        requireNonBlank(fields, 2, "description");
+        return new ToDo(fields[2]);
+    }
+
+    private static Task createDeadline(String[] fields) throws LilyException {
+        requireFieldCount(fields, 4, "deadline");
+        requireNonBlank(fields, 2, "description");
+        requireNonBlank(fields, 3, "'by' date");
+        return new Deadline(fields[2], DateTimeParser.parseStorageFormat(fields[3]));
+    }
+
+    private static Task createEvent(String[] fields) throws LilyException {
+        requireFieldCount(fields, 5, "event");
+        requireNonBlank(fields, 2, "description");
+        requireNonBlank(fields, 3, "'from' time");
+        requireNonBlank(fields, 4, "'to' time");
+        return new Event(fields[2], DateTimeParser.parseStorageFormat(fields[3]),
+                DateTimeParser.parseStorageFormat(fields[4]));
+    }
+
+    /** Restores a task's persisted completion state after it has been constructed. */
+    private static void restoreDoneState(Task task, String doneFlag) {
         if (doneFlag.equals("1")) {
             task.markAsDone();
         }
-        return task;
     }
 
     private static void requireFieldCount(String[] fields, int expected, String taskTypeName)
