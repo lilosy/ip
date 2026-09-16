@@ -91,6 +91,8 @@ public class Parser {
         if (deadlineParts.length < 2) {
             throw new LilyException("Add a deadline for the task");
         }
+        // The preceding check guarantees that both sides of the /by separator exist.
+        assert deadlineParts.length == 2 : "A deadline command must split into description and date";
 
         String description = deadlineParts[0].trim();
         if (description.isEmpty()) {
@@ -124,6 +126,8 @@ public class Parser {
 
         String eventTaskDesc = parts[1];
         String[] eventParts = eventTaskDesc.split(" /from | /to ", 3);
+        // The format check above guarantees description, start, and end fields.
+        assert eventParts.length == 3 : "An event command must split into three fields";
         String description = eventParts[0].trim();
         if (description.isEmpty()) {
             throw new LilyException("Add a description for the event");

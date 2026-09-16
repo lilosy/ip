@@ -19,6 +19,9 @@ public class Event extends Task {
      */
     public Event(String description, LocalDateTime from, LocalDateTime to) {
         super(description);
+        // The command parser establishes this interval invariant before creating the event.
+        assert from != null && to != null : "An event must have both endpoints";
+        assert !to.isBefore(from) : "An event cannot end before it starts";
         this.from = from;
         this.to = to;
     }
