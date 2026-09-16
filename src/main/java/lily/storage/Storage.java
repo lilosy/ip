@@ -329,8 +329,12 @@ public class Storage {
         requireNonBlank(fields, 2, "description");
         requireNonBlank(fields, 3, "'from' time");
         requireNonBlank(fields, 4, "'to' time");
-        return new Event(fields[2], DateTimeParser.parseStorageFormat(fields[3]),
-                DateTimeParser.parseStorageFormat(fields[4]));
+        LocalDateTime from = DateTimeParser.parseStorageFormat(fields[3]);
+        LocalDateTime to = DateTimeParser.parseStorageFormat(fields[4]);
+        if (to.isBefore(from)) {
+            throw new LilyException("event 'to' time cannot be before its 'from' time");
+        }
+        return new Event(fields[2], from, to);
     }
 
     /** Restores a task's persisted completion state after it has been constructed. */

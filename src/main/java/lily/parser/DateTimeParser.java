@@ -78,6 +78,13 @@ public class DateTimeParser {
             strict("d/M/uuuu"),
     };
 
+    /** Date-only formats accepted by the {@code schedule} command. */
+    private static final DateTimeFormatter[] SCHEDULE_DATE_FORMATS = {
+            strict("uuuu-MM-dd"),
+            strict("uuuu-M-d"),
+            strict("d/M/uuuu"),
+    };
+
     private static DateTimeFormatter strict(String pattern) {
         return DateTimeFormatter.ofPattern(pattern).withResolverStyle(ResolverStyle.STRICT);
     }
@@ -132,6 +139,40 @@ public class DateTimeParser {
 
         throw new LilyException("I couldn't understand the date/time '" + rawInput
                 + "'. Try formats like: 2019-10-15, 2019-10-15 1800, or 2/12/2019 1800.");
+    }
+
+    /**
+     * Parses a date requested by the schedule command.
+     *
+     * <p>A blank argument and {@code today} select {@code today}; {@code tomorrow}
+     * selects the following date. A reference date is supplied explicitly so this
+     * relative-date behavior can be tested deterministically.
+     *
+     * @param rawInput date text following the command, or blank for today
+     * @param today current local date to resolve relative keywords against
+     * @return the selected calendar date
+     * @throws LilyException if the argument is not a supported date
+     */
+    public static LocalDate parseScheduleDate(String rawInput, LocalDate today) throws LilyException {
+        assert today != null : "Schedule parsing requires a reference date";
+        String trimmed = rawInput == null ? "" : rawInput.trim();
+        if (trimmed.isEmpty() || trimmed.equals("today")) {
+            return today;
+        }
+        if (trimmed.equals("tomorrow")) {
+            return today.plusDays(1);
+        }
+
+        for (DateTimeFormatter format : SCHEDULE_DATE_FORMATS) {
+            try {
+                return LocalDate.parse(trimmed, format);
+            } catch (DateTimeParseException ignored) {
+                // Try the next supported date-only format.
+            }
+        }
+
+        throw new LilyException("I couldn't understand the date '" + rawInput
+                + "'. Try formats like: 2019-10-15 or 2/12/2019.");
     }
 
     /**

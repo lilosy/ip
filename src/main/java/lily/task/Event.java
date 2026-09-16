@@ -26,6 +26,16 @@ public class Event extends Task {
         this.to = to;
     }
 
+    /** Returns the event's start date and time. */
+    public LocalDateTime getFrom() {
+        return from;
+    }
+
+    /** Returns the event's end date and time. */
+    public LocalDateTime getTo() {
+        return to;
+    }
+
     @Override
     public String toString() {
         return "[E]" + super.toString() + " (from: " + DateTimeParser.formatForDisplay(this.from)

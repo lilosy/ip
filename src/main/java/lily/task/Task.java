@@ -40,6 +40,11 @@ public class Task {
         return description;
     }
 
+    /** Returns whether this task has been completed. */
+    public boolean isDone() {
+        return isDone;
+    }
+
     /** Returns this task as a record suitable for saving to disk. */
     public String toFileString() {
         return "T | " + (isDone ? "1" : "0") + " | " + Storage.escapeField(description);

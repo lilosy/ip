@@ -112,3 +112,30 @@ What would you like to do today?
 
 Bye! See you soon :)
 ```
+
+## Test Case: View a dated schedule
+
+**Aim:** Verify that Lily excludes todos, retains original task numbers, orders
+date-only entries before timed entries, and separates completed tasks.
+
+### Interaction 1
+
+**Input**
+
+```powershell
+New-Item -ItemType Directory -Path data -Force | Out-Null; @("T | 0 | undated task", "E | 0 | morning meeting | 2026-09-16T09:00 | 2026-09-16T10:00", "D | 0 | submit report | 2026-09-16T00:00", "D | 1 | call client | 2026-09-16T14:00") | Set-Content -LiteralPath data\lily.txt; .\gradlew.bat classes; "schedule 2026-09-16`nbye" | java -cp build\classes\java\main lily.Lily
+```
+
+**Expected command response**
+
+```text
+Here is your schedule for Sep 16 2026:
+Not completed:
+3. [D][ ] submit report (by: Sep 16 2026)
+2. [E][ ] morning meeting (from: Sep 16 2026, 9:00AM to: Sep 16 2026, 10:00AM)
+Completed:
+4. [D][X] call client (by: Sep 16 2026, 2:00PM)
+```
+
+The normal welcome message, separators, and farewell message surround this command
+response as in the preceding UI test cases.

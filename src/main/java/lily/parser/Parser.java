@@ -1,5 +1,6 @@
 package lily.parser;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 import lily.exception.LilyException;
@@ -56,6 +57,11 @@ public class Parser {
         } catch (NumberFormatException e) {
             throw new LilyException("Please provide a valid task number.");
         }
+    }
+
+    /** Parses a date argument for the schedule command. */
+    public static LocalDate parseScheduleDate(String argument, LocalDate today) throws LilyException {
+        return DateTimeParser.parseScheduleDate(argument, today);
     }
 
     /**

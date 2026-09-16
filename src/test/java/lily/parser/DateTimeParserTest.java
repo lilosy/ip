@@ -3,6 +3,7 @@ package lily.parser;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 import lily.exception.LilyException;
@@ -121,6 +122,52 @@ public class DateTimeParserTest {
     public void parseUserInput_null_exceptionThrown() {
         LilyException thrown = assertThrows(LilyException.class, () -> DateTimeParser.parseUserInput(null));
         assertEquals("A date/time is required.", thrown.getMessage());
+    }
+
+    // ----- parseScheduleDate -----
+
+    @Test
+    public void parseScheduleDate_emptyArgument_returnsReferenceDate() throws LilyException {
+        LocalDate today = LocalDate.of(2026, 9, 16);
+        assertEquals(today, DateTimeParser.parseScheduleDate("", today));
+    }
+
+    @Test
+    public void parseScheduleDate_today_returnsReferenceDate() throws LilyException {
+        LocalDate today = LocalDate.of(2026, 9, 16);
+        assertEquals(today, DateTimeParser.parseScheduleDate("today", today));
+    }
+
+    @Test
+    public void parseScheduleDate_tomorrow_returnsFollowingDate() throws LilyException {
+        LocalDate today = LocalDate.of(2026, 9, 16);
+        assertEquals(LocalDate.of(2026, 9, 17),
+                DateTimeParser.parseScheduleDate("tomorrow", today));
+    }
+
+    @Test
+    public void parseScheduleDate_supportedAbsoluteFormats_returnDate() throws LilyException {
+        LocalDate today = LocalDate.of(2026, 1, 1);
+        assertEquals(LocalDate.of(2026, 9, 16),
+                DateTimeParser.parseScheduleDate("2026-09-16", today));
+        assertEquals(LocalDate.of(2026, 9, 16),
+                DateTimeParser.parseScheduleDate("16/9/2026", today));
+    }
+
+    @Test
+    public void parseScheduleDate_dateWithTime_exceptionThrown() {
+        LocalDate today = LocalDate.of(2026, 9, 16);
+        assertThrows(LilyException.class,
+                () -> DateTimeParser.parseScheduleDate("2026-09-16 1800", today));
+    }
+
+    @Test
+    public void parseScheduleDate_impossibleDate_exceptionThrown() {
+        LocalDate today = LocalDate.of(2026, 9, 16);
+        LilyException thrown = assertThrows(LilyException.class,
+                () -> DateTimeParser.parseScheduleDate("2026-02-30", today));
+        assertEquals("I couldn't understand the date '2026-02-30'. "
+                + "Try formats like: 2019-10-15 or 2/12/2019.", thrown.getMessage());
     }
 
     // ----- formatForStorage -----
