@@ -91,6 +91,8 @@ public class Parser {
         if (deadlineParts.length < 2) {
             throw new LilyException("Add a deadline for the task");
         }
+        // The preceding check guarantees that both sides of the /by separator exist.
+        assert deadlineParts.length == 2 : "A deadline command must split into description and date";
 
         String description = deadlineParts[0].trim();
         if (description.isEmpty()) {

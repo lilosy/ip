@@ -23,31 +23,43 @@ public class TaskList {
 
     /** Creates a task list populated with the supplied saved tasks. */
     public TaskList(List<Task> tasks) {
+        // Storage.load() returns a concrete list, so this constructor never owns null.
+        assert tasks != null : "A task list requires an initial collection";
         this.tasks = new ArrayList<>(tasks);
     }
 
     /** Adds a task to the end of the list. */
     public void add(Task task) {
+        // All task creation paths construct a real Task before adding it to the list.
+        assert task != null : "A task list cannot contain null tasks";
         tasks.add(task);
     }
 
     /** Returns the task at the given zero-based index. */
     public Task get(int index) {
+        // Lily validates user-supplied task numbers before delegating to TaskList.
+        assert containsIndex(index) : "Task index must identify an existing task";
         return tasks.get(index);
     }
 
     /** Removes and returns the task at the given zero-based index. */
     public Task remove(int index) {
+        // Lily validates user-supplied task numbers before delegating to TaskList.
+        assert containsIndex(index) : "Task index must identify an existing task";
         return tasks.remove(index);
     }
 
     /** Marks the task at the given zero-based index as done. */
     public void mark(int index) {
+        // Lily validates user-supplied task numbers before delegating to TaskList.
+        assert containsIndex(index) : "Task index must identify an existing task";
         tasks.get(index).markAsDone();
     }
 
     /** Marks the task at the given zero-based index as not done. */
     public void unmark(int index) {
+        // Lily validates user-supplied task numbers before delegating to TaskList.
+        assert containsIndex(index) : "Task index must identify an existing task";
         tasks.get(index).markAsUndone();
     }
 

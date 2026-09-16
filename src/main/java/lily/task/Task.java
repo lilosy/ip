@@ -13,6 +13,9 @@ public class Task {
      * @param description words that describe the task
      */
     public Task(String description) {
+        // Descriptions are validated at Lily's command and storage boundaries.
+        // A task object itself must never represent a missing description.
+        assert description != null : "A task must have a description";
         this.description = description;
         this.isDone = false;
     }
