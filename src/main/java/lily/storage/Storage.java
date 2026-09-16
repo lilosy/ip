@@ -264,46 +264,70 @@ public class Storage {
                     + rawFields.length);
         }
 
+        String[] fields = normalizeFields(rawFields);
+        validateDoneFlag(fields[1]);
+        Task task = createTask(fields);
+        restoreDoneState(task, fields[1]);
+        return task;
+    }
+
+    /** Trims and unescapes every field in a saved record. */
+    private static String[] normalizeFields(String[] rawFields) {
         String[] fields = new String[rawFields.length];
         for (int i = 0; i < rawFields.length; i++) {
             fields[i] = unescapeField(rawFields[i].trim());
         }
+        return fields;
+    }
 
-        String type = fields[0];
-        String doneFlag = fields[1];
+    /** Validates the common completion-state field used by every record type. */
+    private static void validateDoneFlag(String doneFlag) throws LilyException {
         if (!doneFlag.equals("0") && !doneFlag.equals("1")) {
             throw new LilyException("done-flag must be '0' or '1', found '" + doneFlag + "'");
         }
+    }
 
-        Task task;
-        switch (type) {
+    /** Creates the correct task subtype after its fields have been normalized. */
+    private static Task createTask(String[] fields) throws LilyException {
+        switch (fields[0]) {
             case "T":
-                requireFieldCount(fields, 3, "todo");
-                requireNonBlank(fields, 2, "description");
-                task = new ToDo(fields[2]);
-                break;
+                return createTodo(fields);
             case "D":
-                requireFieldCount(fields, 4, "deadline");
-                requireNonBlank(fields, 2, "description");
-                requireNonBlank(fields, 3, "'by' date");
-                task = new Deadline(fields[2], DateTimeParser.parseStorageFormat(fields[3]));
-                break;
+                return createDeadline(fields);
             case "E":
-                requireFieldCount(fields, 5, "event");
-                requireNonBlank(fields, 2, "description");
-                requireNonBlank(fields, 3, "'from' time");
-                requireNonBlank(fields, 4, "'to' time");
-                task = new Event(fields[2], DateTimeParser.parseStorageFormat(fields[3]),
-                        DateTimeParser.parseStorageFormat(fields[4]));
-                break;
+                return createEvent(fields);
             default:
-                throw new LilyException("unknown task type '" + type + "' (expected T, D, or E)");
+                throw new LilyException("unknown task type '" + fields[0] + "' (expected T, D, or E)");
         }
+    }
 
+    private static Task createTodo(String[] fields) throws LilyException {
+        requireFieldCount(fields, 3, "todo");
+        requireNonBlank(fields, 2, "description");
+        return new ToDo(fields[2]);
+    }
+
+    private static Task createDeadline(String[] fields) throws LilyException {
+        requireFieldCount(fields, 4, "deadline");
+        requireNonBlank(fields, 2, "description");
+        requireNonBlank(fields, 3, "'by' date");
+        return new Deadline(fields[2], DateTimeParser.parseStorageFormat(fields[3]));
+    }
+
+    private static Task createEvent(String[] fields) throws LilyException {
+        requireFieldCount(fields, 5, "event");
+        requireNonBlank(fields, 2, "description");
+        requireNonBlank(fields, 3, "'from' time");
+        requireNonBlank(fields, 4, "'to' time");
+        return new Event(fields[2], DateTimeParser.parseStorageFormat(fields[3]),
+                DateTimeParser.parseStorageFormat(fields[4]));
+    }
+
+    /** Restores a task's persisted completion state after it has been constructed. */
+    private static void restoreDoneState(Task task, String doneFlag) {
         if (doneFlag.equals("1")) {
             task.markAsDone();
         }
-        return task;
     }
 
     private static void requireFieldCount(String[] fields, int expected, String taskTypeName)
