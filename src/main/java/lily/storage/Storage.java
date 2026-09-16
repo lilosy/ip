@@ -176,6 +176,14 @@ public class Storage {
      * @return the tasks reconstructed from the data file (possibly empty)
      */
     public List<Task> load() {
+        List<String> taskRecords = readTaskRecords();
+        return parseTaskRecords(taskRecords);
+    }
+
+    /**
+     * Reads the saved records, recovering from an unreadable file by backing it up.
+     */
+    private List<String> readTaskRecords() {
         if (Files.notExists(dataFile)) {
             return new ArrayList<>();
         }
@@ -186,9 +194,8 @@ public class Storage {
             return new ArrayList<>();
         }
 
-        List<String> lines;
         try {
-            lines = Files.readAllLines(dataFile, StandardCharsets.UTF_8);
+            return Files.readAllLines(dataFile, StandardCharsets.UTF_8);
         } catch (MalformedInputException e) {
             backupCorruptedFile("not valid UTF-8 text");
             return new ArrayList<>();
@@ -196,11 +203,14 @@ public class Storage {
             backupCorruptedFile(e.getMessage());
             return new ArrayList<>();
         }
+    }
 
+    /** Parses valid records and reports individual records that cannot be recovered. */
+    private List<Task> parseTaskRecords(List<String> taskRecords) {
         List<Task> tasks = new ArrayList<>();
         int lineNumber = 0;
         int skippedCount = 0;
-        for (String taskRecord : lines) {
+        for (String taskRecord : taskRecords) {
             lineNumber++;
             if (taskRecord == null || taskRecord.isBlank()) {
                 continue;
