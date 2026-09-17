@@ -22,7 +22,7 @@ class LilyTest {
         String addResponse = lily.getResponse("todo read GUI tutorial");
         String listResponse = lily.getResponse("list");
 
-        assertTrue(addResponse.contains("I've added this task"));
+        assertTrue(addResponse.contains("Planted it on your list"));
         assertTrue(listResponse.contains("read GUI tutorial"));
     }
 

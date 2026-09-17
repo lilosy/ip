@@ -21,9 +21,9 @@ import lily.ui.Ui;
 /** Runs Lily's command-line task manager. */
 public class Lily {
     /** Greeting shared by both the command-line and graphical interfaces. */
-    public static final String WELCOME_MESSAGE = "Hey there! I'm Lily.\nWhat would you like to do today?";
+    public static final String WELCOME_MESSAGE = "Hello, I'm Lily. Let's give your day a little room to grow.";
     /** Farewell shared by both the command-line and graphical interfaces. */
-    public static final String GOODBYE_MESSAGE = "Bye! See you soon :)";
+    public static final String GOODBYE_MESSAGE = "Take care. I'll keep your plans safe until you return.";
     private final Storage storage;
     private final TaskList tasks;
     private final Ui ui;
@@ -57,7 +57,7 @@ public class Lily {
             return "Please enter a command.";
         }
         if (userInput.equals("bye")) {
-            return "Bye! See you soon :)";
+            return GOODBYE_MESSAGE;
         }
 
         try {
@@ -79,7 +79,7 @@ public class Lily {
         String argument = Parser.getArguments(userInput);
         switch (command) {
         case "list":
-            return unchanged(formatTaskList(tasks.toList(), "Here are the tasks in your list:"));
+            return unchanged(formatTaskList(tasks.toList(), "Here's your little garden of tasks:"));
         case "mark":
             return changeTaskStatus(argument, true);
         case "unmark":
@@ -120,8 +120,8 @@ public class Lily {
         default -> throw new IllegalArgumentException("Unsupported task command: " + command);
         };
         tasks.add(task);
-        return changed("Got it. I've added this task:\n  " + task + "\nNow you have "
-                + tasks.size() + " tasks in the list.");
+        return changed("Planted it on your list:\n  " + task + "\nYou now have "
+                + tasks.size() + " tasks to tend.");
     }
 
     private CommandResult deleteTask(String argument) throws LilyException {
@@ -130,8 +130,8 @@ public class Lily {
             return unchanged("That task number does not exist.");
         }
         Task removed = tasks.remove(index);
-        return changed("OK! I've removed this task:\n  " + removed + "\nNow you have "
-                + tasks.size() + " tasks in the list.");
+        return changed("All cleared away:\n  " + removed + "\nYou now have "
+                + tasks.size() + " tasks to tend.");
     }
 
     private CommandResult findTasks(String argument) throws LilyException {
@@ -226,7 +226,7 @@ public class Lily {
 
     private String formatTaskList(List<Task> taskList, String heading) {
         if (taskList.isEmpty()) {
-            return "There are no matching tasks in your list.";
+            return "Your list is clear—a peaceful patch of soil.";
         }
         StringBuilder response = new StringBuilder(heading);
         for (int i = 0; i < taskList.size(); i++) {
