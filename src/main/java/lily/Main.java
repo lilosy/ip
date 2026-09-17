@@ -17,6 +17,9 @@ public class Main extends Application {
         AnchorPane root = loader.load();
         loader.<MainWindow>getController().setLily(new Lily("data/lily.txt"));
         stage.setTitle("Lily");
+        stage.setResizable(true);
+        stage.setMinWidth(360);
+        stage.setMinHeight(400);
         Scene scene = new Scene(root);
         scene.getStylesheets().add(Main.class.getResource("/view/lily.css").toExternalForm());
         stage.setScene(scene);

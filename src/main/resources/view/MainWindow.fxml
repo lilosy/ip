@@ -6,10 +6,10 @@
 <?import javafx.scene.layout.VBox?>
 <AnchorPane prefHeight="600.0" prefWidth="400.0" styleClass="main-window" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="lily.ui.MainWindow">
     <children>
-        <ScrollPane fx:id="scrollPane" hbarPolicy="NEVER" prefHeight="550.0" prefWidth="400.0" styleClass="chat-scroll-pane" AnchorPane.bottomAnchor="50.0">
-            <content><VBox fx:id="dialogContainer" prefWidth="385.0" styleClass="dialog-container" /></content>
+        <ScrollPane fx:id="scrollPane" fitToWidth="true" hbarPolicy="NEVER" styleClass="chat-scroll-pane" AnchorPane.bottomAnchor="55.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+            <content><VBox fx:id="dialogContainer" styleClass="dialog-container" /></content>
         </ScrollPane>
-        <TextField fx:id="userInput" onAction="#handleUserInput" prefHeight="45.0" prefWidth="320.0" promptText="What shall we tend to today?" styleClass="command-input" AnchorPane.bottomAnchor="5.0" AnchorPane.leftAnchor="5.0" />
+        <TextField fx:id="userInput" onAction="#handleUserInput" prefHeight="45.0" promptText="What shall we tend to today?" styleClass="command-input" AnchorPane.bottomAnchor="5.0" AnchorPane.leftAnchor="5.0" AnchorPane.rightAnchor="80.0" />
         <Button fx:id="sendButton" mnemonicParsing="false" onAction="#handleUserInput" prefHeight="45.0" prefWidth="70.0" styleClass="send-button" text="➤ Send" AnchorPane.bottomAnchor="5.0" AnchorPane.rightAnchor="5.0" />
     </children>
 </AnchorPane>
