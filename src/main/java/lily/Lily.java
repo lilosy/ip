@@ -95,7 +95,7 @@ public class Lily {
         case "schedule":
             return showSchedule(argument);
         default:
-            return unchanged("I don't recognise that command.");
+            return unchanged("I’m not quite sure how to tend to that. Try `list`, `todo`, `deadline`, or `event`.");
         }
     }
 

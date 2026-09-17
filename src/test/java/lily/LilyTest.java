@@ -27,6 +27,14 @@ class LilyTest {
     }
 
     @Test
+    void getResponse_unknownCommand_returnsGardenThemedGuidance() {
+        Lily lily = new Lily(temporaryDirectory.resolve("lily.txt").toString());
+
+        assertEquals("I’m not quite sure how to tend to that. Try `list`, `todo`, `deadline`, or `event`.",
+                lily.getResponse("water plants"));
+    }
+
+    @Test
     void getResponse_schedule_ordersAndGroupsDatedTasksWithOriginalNumbers() {
         Lily lily = new Lily(temporaryDirectory.resolve("lily.txt").toString());
         lily.getResponse("todo undated task");
