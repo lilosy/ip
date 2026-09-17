@@ -6,6 +6,7 @@ import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.VBox;
 import lily.Lily;
+import lily.Lily.Response;
 
 /** Controller for Lily's chat-style main window. */
 public class MainWindow {
@@ -34,8 +35,9 @@ public class MainWindow {
         if (input.isBlank()) {
             return;
         }
+        Response response = lily.getResponseResult(input);
         dialogContainer.getChildren().addAll(DialogBox.getUserDialog(input),
-                DialogBox.getLilyDialog(lily.getResponse(input)));
+                DialogBox.getLilyDialog(response.message(), response.isError()));
         userInput.clear();
     }
 }

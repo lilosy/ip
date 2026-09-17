@@ -35,6 +35,16 @@
     -fx-background-color: #EEE6F7;
 }
 
+/* A warm red reply bubble makes a command error easy to spot without relying on colour alone. */
+.error-message {
+    -fx-background-color: #FDE2E2;
+    -fx-text-fill: #A61B1B;
+    -fx-border-color: #D64545;
+    -fx-border-width: 1;
+    -fx-border-radius: 12;
+    -fx-font-weight: bold;
+}
+
 .user-message {
     -fx-background-color: #DDEDDC;
 }

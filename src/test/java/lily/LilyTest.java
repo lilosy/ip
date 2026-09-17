@@ -1,6 +1,7 @@
 package lily;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
@@ -13,6 +14,25 @@ import org.junit.jupiter.api.io.TempDir;
 
 /** Tests Lily's GUI-facing command-processing method. */
 class LilyTest {
+
+    @Test
+    void getResponseResult_unknownCommand_marksReplyAsError() {
+        Lily lily = new Lily(temporaryDirectory.resolve("lily.txt").toString());
+
+        Lily.Response response = lily.getResponseResult("water plants");
+
+        assertTrue(response.isError());
+        assertTrue(response.message().contains("not quite sure"));
+    }
+
+    @Test
+    void getResponseResult_validCommand_marksReplyAsNonError() {
+        Lily lily = new Lily(temporaryDirectory.resolve("lily.txt").toString());
+
+        Lily.Response response = lily.getResponseResult("list");
+
+        assertFalse(response.isError());
+    }
     @TempDir
     Path temporaryDirectory;
 

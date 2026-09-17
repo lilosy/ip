@@ -30,6 +30,15 @@ public class DialogBox extends HBox {
 
     /** Creates a left-aligned Lily reply. */
     public static DialogBox getLilyDialog(String text) {
-        return new DialogBox(text, Pos.CENTER_LEFT, true);
+        return getLilyDialog(text, false);
+    }
+
+    /** Creates a left-aligned Lily reply, using the error style when appropriate. */
+    public static DialogBox getLilyDialog(String text, boolean isError) {
+        DialogBox dialog = new DialogBox(text, Pos.CENTER_LEFT, true);
+        if (isError) {
+            dialog.getChildren().getLast().getStyleClass().add("error-message");
+        }
+        return dialog;
     }
 }

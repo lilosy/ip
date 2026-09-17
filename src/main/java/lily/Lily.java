@@ -69,8 +69,19 @@ public class Lily {
      * @return a human-readable reply
      */
     public String getResponse(String input) {
+        return getResponseResult(input).message();
+    }
+
+    /**
+     * Processes one command and returns both Lily's reply and whether it reports
+     * a user-facing error. The GUI uses this flag to present errors distinctly.
+     *
+     * @param input command typed by the user
+     * @return the reply together with its error status
+     */
+    public Response getResponseResult(String input) {
         if (input == null || input.isBlank()) {
-            return "Please enter a command.";
+            return new Response("Please enter a command.", true);
         }
 
         try {
@@ -78,11 +89,11 @@ public class Lily {
             if (result.changedTaskList()) {
                 storage.save(tasks.toList());
             }
-            return result.response();
+            return new Response(result.response(), result.isError());
         } catch (LilyException | IOException e) {
-            return e.getMessage();
+            return new Response(e.getMessage(), true);
         } catch (RuntimeException e) {
-            return "Something went wrong handling that command: " + e.getMessage();
+            return new Response("Something went wrong handling that command: " + e.getMessage(), true);
         }
     }
 
@@ -114,7 +125,7 @@ public class Lily {
             requireAtMostOneArgument(command, argument);
             return showSchedule(argument);
         default:
-            return unchanged("I’m not quite sure how to tend to that. Try `list`, `todo`, `deadline`, or `event`.");
+            return error("I’m not quite sure how to tend to that. Try `list`, `todo`, `deadline`, or `event`.");
         }
     }
 
@@ -122,7 +133,7 @@ public class Lily {
         String command = shouldMarkDone ? "mark" : "unmark";
         int index = parseRequiredTaskIndex(argument, command);
         if (!tasks.containsIndex(index)) {
-            return unchanged("That task number does not exist.");
+            return error("That task number does not exist.");
         }
 
         Task task = shouldMarkDone ? markTask(index) : unmarkTask(index);
@@ -146,7 +157,7 @@ public class Lily {
     private CommandResult deleteTask(String argument) throws LilyException {
         int index = parseRequiredTaskIndex(argument, "delete");
         if (!tasks.containsIndex(index)) {
-            return unchanged("That task number does not exist.");
+            return error("That task number does not exist.");
         }
         Task removed = tasks.remove(index);
         return changed("All cleared away:\n  " + removed + "\nYou now have "
@@ -219,11 +230,16 @@ public class Lily {
     }
 
     private CommandResult changed(String response) {
-        return new CommandResult(response, true);
+        return new CommandResult(response, true, false);
     }
 
     private CommandResult unchanged(String response) {
-        return new CommandResult(response, false);
+        return new CommandResult(response, false, false);
+    }
+
+    /** Builds an unchanged response that explains an invalid user command. */
+    private CommandResult error(String response) {
+        return new CommandResult(response, false, true);
     }
 
     private Task markTask(int index) {
@@ -277,7 +293,12 @@ public class Lily {
     }
 
     /** Represents a command reply and whether it needs to be saved. */
-    private record CommandResult(String response, boolean changedTaskList) {
+    /** A reply from Lily together with the presentation status needed by the GUI. */
+    public record Response(String message, boolean isError) {
+    }
+
+    /** Represents a command reply, whether it needs saving, and whether it is an error. */
+    private record CommandResult(String response, boolean changedTaskList, boolean isError) {
     }
 
     /** A dated task together with its original number and per-day sorting data. */
