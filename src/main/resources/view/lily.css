@@ -7,6 +7,21 @@
     -fx-background-color: #FFF9F0;
 }
 
+/* Kept outside the scroll pane so Lily's identity remains visible while chatting. */
+.app-header {
+    -fx-background-color: #EEE6F7;
+    -fx-padding: 8 18;
+    -fx-border-color: transparent transparent #B7D3B1 transparent;
+    -fx-border-width: 0 0 2 0;
+}
+
+.header-title {
+    -fx-font-family: Georgia, serif;
+    -fx-font-size: 24px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #5B4770;
+}
+
 .chat-scroll-pane,
 .chat-scroll-pane > .viewport {
     -fx-background-color: transparent;
