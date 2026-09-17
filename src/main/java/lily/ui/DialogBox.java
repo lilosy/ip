@@ -6,24 +6,30 @@ import javafx.scene.layout.HBox;
 
 /** A labelled chat message aligned for either the user or Lily. */
 public class DialogBox extends HBox {
-    private DialogBox(String text, Pos alignment, String style) {
+    private DialogBox(String text, Pos alignment, boolean isLily) {
         setAlignment(alignment);
-        setStyle("-fx-padding: 10; " + style);
+        getStyleClass().add(isLily ? "lily-dialog" : "user-dialog");
+
+        if (isLily) {
+            Label avatar = new Label("✿");
+            avatar.getStyleClass().add("lily-avatar");
+            getChildren().add(avatar);
+        }
+
         Label message = new Label(text);
         message.setWrapText(true);
         message.setMaxWidth(300);
-        message.setStyle("-fx-padding: 8; -fx-background-radius: 8; -fx-background-color: "
-                + (alignment == Pos.CENTER_RIGHT ? "#d6ecff" : "#f1e5ff") + ";");
+        message.getStyleClass().add(isLily ? "lily-message" : "user-message");
         getChildren().add(message);
     }
 
     /** Creates a right-aligned user message. */
     public static DialogBox getUserDialog(String text) {
-        return new DialogBox(text, Pos.CENTER_RIGHT, "");
+        return new DialogBox(text, Pos.CENTER_RIGHT, false);
     }
 
     /** Creates a left-aligned Lily reply. */
     public static DialogBox getLilyDialog(String text) {
-        return new DialogBox(text, Pos.CENTER_LEFT, "");
+        return new DialogBox(text, Pos.CENTER_LEFT, true);
     }
 }

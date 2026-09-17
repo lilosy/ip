@@ -17,7 +17,9 @@ public class Main extends Application {
         AnchorPane root = loader.load();
         loader.<MainWindow>getController().setLily(new Lily("data/lily.txt"));
         stage.setTitle("Lily");
-        stage.setScene(new Scene(root));
+        Scene scene = new Scene(root);
+        scene.getStylesheets().add(Main.class.getResource("/view/lily.css").toExternalForm());
+        stage.setScene(scene);
         stage.show();
     }
 }

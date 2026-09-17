@@ -1,0 +1,66 @@
+.root {
+    -fx-font-family: "Segoe UI", sans-serif;
+    -fx-background-color: #FFF9F0;
+}
+
+.main-window {
+    -fx-background-color: #FFF9F0;
+}
+
+.chat-scroll-pane,
+.chat-scroll-pane > .viewport {
+    -fx-background-color: transparent;
+}
+
+.dialog-container {
+    -fx-background-color: #FFF9F0;
+    -fx-padding: 8;
+    -fx-spacing: 2;
+}
+
+.lily-dialog,
+.user-dialog {
+    -fx-padding: 6 2;
+    -fx-spacing: 7;
+}
+
+.lily-message,
+.user-message {
+    -fx-padding: 9 11;
+    -fx-background-radius: 12;
+    -fx-text-fill: #2D3A2E;
+}
+
+.lily-message {
+    -fx-background-color: #EEE6F7;
+}
+
+.user-message {
+    -fx-background-color: #DDEDDC;
+}
+
+.lily-avatar {
+    -fx-text-fill: #8B6FA8;
+    -fx-font-size: 20px;
+    -fx-padding: 5 0 0 2;
+}
+
+.command-input {
+    -fx-background-color: white;
+    -fx-border-color: #8B6FA8;
+    -fx-border-radius: 7;
+    -fx-background-radius: 7;
+    -fx-text-fill: #2D3A2E;
+    -fx-prompt-text-fill: #708070;
+}
+
+.send-button {
+    -fx-background-color: #5C8D5A;
+    -fx-background-radius: 7;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+}
+
+.send-button:hover {
+    -fx-background-color: #4D794C;
+}
