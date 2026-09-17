@@ -27,33 +27,33 @@ import lily.ui.Ui;
  */
 public class Parser {
     private static final String COMMAND_SPACING_ERROR =
-            "Use single spaces between words, without leading or trailing spaces.";
+            "Use single spaces between words.";
 
     private Parser() {
         // Static utility class; no instances.
     }
 
     /**
-     * Validates the spacing of a complete command and separates its command word
-     * from its arguments. Command words are case-insensitive, while argument text
-     * retains its original case.
+     * Trims the outside of a complete command, validates its internal spacing, and
+     * separates its command word from its arguments. Command words are
+     * case-insensitive, while argument text retains its original case.
      *
      * @param userInput complete command typed by the user
      * @return the normalized command word and case-preserved argument text
-     * @throws LilyException if the command uses leading, trailing, repeated, or
-     *                       non-space whitespace
+     * @throws LilyException if the command uses repeated or non-space whitespace
      */
     public static ParsedCommand parseCommand(String userInput) throws LilyException {
         if (userInput == null || userInput.isBlank()) {
             throw new LilyException("Please enter a command.");
         }
-        if (!userInput.equals(userInput.trim()) || userInput.contains("  ")
-                || userInput.chars().anyMatch(character -> Character.isWhitespace(character)
+        String trimmedInput = userInput.trim();
+        if (trimmedInput.contains("  ")
+                || trimmedInput.chars().anyMatch(character -> Character.isWhitespace(character)
                         && character != ' ')) {
             throw new LilyException(COMMAND_SPACING_ERROR);
         }
 
-        String[] parts = userInput.split(" ", 2);
+        String[] parts = trimmedInput.split(" ", 2);
         String commandWord = parts[0].toLowerCase(Locale.ROOT);
         String arguments = parts.length == 2 ? parts[1] : "";
         return new ParsedCommand(commandWord, arguments);

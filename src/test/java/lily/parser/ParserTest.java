@@ -32,13 +32,19 @@ public class ParserTest {
     }
 
     @Test
-    public void parseCommand_leadingWhitespace_exceptionThrown() {
-        assertSpacingError(" list");
+    public void parseCommand_leadingWhitespace_ignored() throws LilyException {
+        Parser.ParsedCommand command = Parser.parseCommand("  list");
+
+        assertEquals("list", command.commandWord());
+        assertEquals("", command.arguments());
     }
 
     @Test
-    public void parseCommand_trailingWhitespace_exceptionThrown() {
-        assertSpacingError("list ");
+    public void parseCommand_trailingWhitespace_ignored() throws LilyException {
+        Parser.ParsedCommand command = Parser.parseCommand("todo read book  ");
+
+        assertEquals("todo", command.commandWord());
+        assertEquals("read book", command.arguments());
     }
 
     @Test
@@ -121,8 +127,7 @@ public class ParserTest {
 
     private static void assertSpacingError(String input) {
         LilyException thrown = assertThrows(LilyException.class, () -> Parser.parseCommand(input));
-        assertEquals("Use single spaces between words, without leading or trailing spaces.",
-                thrown.getMessage());
+        assertEquals("Use single spaces between words.", thrown.getMessage());
     }
 
     private static void assertInvalidTaskNumber(String input) {

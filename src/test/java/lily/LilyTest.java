@@ -44,13 +44,11 @@ class LilyTest {
     }
 
     @Test
-    void getResponse_invalidSpacing_returnsClearFormatMessage() {
+    void getResponse_outerSpaces_ignoredButRepeatedInternalSpacesRejected() {
         Lily lily = new Lily(temporaryDirectory.resolve("lily.txt").toString());
-        String expected = "Use single spaces between words, without leading or trailing spaces.";
 
-        assertEquals(expected, lily.getResponse(" list"));
-        assertEquals(expected, lily.getResponse("list "));
-        assertEquals(expected, lily.getResponse("todo  read book"));
+        assertEquals("Your list is clear—a peaceful patch of soil.", lily.getResponse("  list  "));
+        assertEquals("Use single spaces between words.", lily.getResponse("todo  read book"));
     }
 
     @Test
