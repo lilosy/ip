@@ -96,11 +96,9 @@ public class Parser {
      * @throws LilyException if no description was supplied
      */
     public static Task parseTodo(String userInput) throws LilyException {
-        String[] parts = userInput.split(" ", 2);
-        if (parts.length < 2) {
-            throw new LilyException("Add a description for the todo task");
-        }
-        return new ToDo(parts[1]);
+        String description = parseTaskArguments(userInput, "todo");
+        validateDescription(description, "todo");
+        return new ToDo(description);
     }
 
     /**
@@ -112,22 +110,13 @@ public class Parser {
      *                       or malformed
      */
     public static Task parseDeadline(String userInput) throws LilyException {
-        String[] parts = userInput.split(" ", 2);
-        if (parts.length < 2) {
-            throw new LilyException("Add a description for the deadline task");
-        }
-
-        String deadlineTaskDesc = parts[1];
-        String[] deadlineParts = deadlineTaskDesc.split(" /by ", 2);
-        if (deadlineParts.length < 2) {
-            throw new LilyException("Add a deadline for the task");
-        }
-        // The preceding check guarantees that both sides of the /by separator exist.
-        assert deadlineParts.length == 2 : "A deadline command must split into description and date";
-
-        String description = deadlineParts[0].trim();
-        if (description.isEmpty()) {
-            throw new LilyException("Add a description for the deadline task");
+        String details = parseTaskArguments(userInput, "deadline");
+        String[] deadlineParts = splitAroundSingleClause(details, "/by",
+                "Use exactly one '/by' clause: deadline <description> /by <date/time>.");
+        String description = deadlineParts[0];
+        validateDescription(description, "deadline");
+        if (deadlineParts[1].isEmpty()) {
+            throw new LilyException("Add a date/time after '/by'.");
         }
 
         LocalDateTime by = DateTimeParser.parseUserInput(deadlineParts[1]);
@@ -144,15 +133,15 @@ public class Parser {
      *                       is before {@code /from}
      */
     public static Task parseEvent(String userInput) throws LilyException {
-        String[] parts = userInput.split(" ", 2);
-        if (parts.length < 2) {
-            throw new LilyException("Add a description for the event");
+        String details = parseTaskArguments(userInput, "event");
+        String[] eventParts = splitEventDetails(details);
+        String description = eventParts[0];
+        validateDescription(description, "event");
+        if (eventParts[1].isEmpty()) {
+            throw new LilyException("Add a date/time after '/from'.");
         }
-
-        String[] eventParts = splitEventDetails(parts[1]);
-        String description = eventParts[0].trim();
-        if (description.isEmpty()) {
-            throw new LilyException("Add a description for the event");
+        if (eventParts[2].isEmpty()) {
+            throw new LilyException("Add a date/time after '/to'.");
         }
 
         LocalDateTime from = DateTimeParser.parseUserInput(eventParts[1]);
@@ -165,11 +154,83 @@ public class Parser {
 
     /** Validates the event clauses and separates the description, start, and end text. */
     private static String[] splitEventDetails(String eventDetails) throws LilyException {
-        if (!eventDetails.matches(".*\\s/from\\s.*\\s/to\\s.*")) {
-            throw new LilyException(
-                    "Wrong format for event, use this format: "
-                            + "event [event desc] /from [...] /to [...]");
+        String[] tokens = eventDetails.split(" ", -1);
+        int fromIndex = findSingleClauseIndex(tokens, "/from");
+        int toIndex = findSingleClauseIndex(tokens, "/to");
+        if (fromIndex == -2 || toIndex == -2) {
+            throw new LilyException("Use '/from' and '/to' exactly once: "
+                    + "event <description> /from <start> /to <end>.");
         }
-        return eventDetails.split(" /from | /to ", 3);
+        if (fromIndex < 0 || toIndex < 0) {
+            throw new LilyException("An event needs both '/from' and '/to' clauses: "
+                    + "event <description> /from <start> /to <end>.");
+        }
+        if (fromIndex >= toIndex) {
+            throw new LilyException("Place '/from' before '/to': "
+                    + "event <description> /from <start> /to <end>.");
+        }
+        return new String[] {
+                joinTokens(tokens, 0, fromIndex),
+                joinTokens(tokens, fromIndex + 1, toIndex),
+                joinTokens(tokens, toIndex + 1, tokens.length)
+        };
+    }
+
+    /** Returns validated arguments belonging to the expected task command. */
+    private static String parseTaskArguments(String userInput, String expectedCommand) throws LilyException {
+        ParsedCommand parsedCommand = parseCommand(userInput);
+        if (!parsedCommand.commandWord().equals(expectedCommand)) {
+            throw new LilyException("Expected a '" + expectedCommand + "' command.");
+        }
+        return parsedCommand.arguments();
+    }
+
+    /** Rejects missing descriptions and characters unsafe for line-based storage. */
+    private static void validateDescription(String description, String taskType) throws LilyException {
+        if (description.isBlank()) {
+            throw new LilyException("Add a description for the " + taskType + " task.");
+        }
+        if (description.codePoints().anyMatch(Parser::isUnsafeDescriptionCharacter)) {
+            throw new LilyException("Task descriptions cannot contain line breaks or control characters.");
+        }
+    }
+
+    private static boolean isUnsafeDescriptionCharacter(int character) {
+        int characterType = Character.getType(character);
+        return Character.isISOControl(character)
+                || characterType == Character.LINE_SEPARATOR
+                || characterType == Character.PARAGRAPH_SEPARATOR;
+    }
+
+    /** Splits details around exactly one whitespace-delimited clause marker. */
+    private static String[] splitAroundSingleClause(String details, String clause, String errorMessage)
+            throws LilyException {
+        String[] tokens = details.split(" ", -1);
+        int clauseIndex = findSingleClauseIndex(tokens, clause);
+        if (clauseIndex < 0) {
+            throw new LilyException(errorMessage);
+        }
+        return new String[] {
+                joinTokens(tokens, 0, clauseIndex),
+                joinTokens(tokens, clauseIndex + 1, tokens.length)
+        };
+    }
+
+    /** Returns a clause index, -1 when absent, or -2 when duplicated. */
+    private static int findSingleClauseIndex(String[] tokens, String clause) {
+        int foundIndex = -1;
+        for (int i = 0; i < tokens.length; i++) {
+            if (tokens[i].equals(clause)) {
+                if (foundIndex >= 0) {
+                    return -2;
+                }
+                foundIndex = i;
+            }
+        }
+        return foundIndex;
+    }
+
+    private static String joinTokens(String[] tokens, int startIndex, int endIndex) {
+        return String.join(" ", java.util.Arrays.copyOfRange(tokens, startIndex, endIndex));
     }
 }

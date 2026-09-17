@@ -1,9 +1,14 @@
 package lily.parser;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import java.time.LocalDateTime;
+
 import lily.exception.LilyException;
+import lily.task.Event;
+import lily.task.Task;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -55,6 +60,108 @@ public class ParserTest {
     @Test
     public void parseCommand_tabInsteadOfSpace_exceptionThrown() {
         assertSpacingError("todo\tread book");
+    }
+
+    @Test
+    public void parseTodo_blankDescription_exceptionThrown() {
+        LilyException thrown = assertThrows(LilyException.class, () -> Parser.parseTodo("todo"));
+
+        assertEquals("Add a description for the todo task.", thrown.getMessage());
+    }
+
+    @Test
+    public void parseTodo_controlCharacterInDescription_exceptionThrown() {
+        LilyException thrown = assertThrows(LilyException.class,
+                () -> Parser.parseTodo("todo inspect\u0000report"));
+
+        assertEquals("Task descriptions cannot contain line breaks or control characters.",
+                thrown.getMessage());
+    }
+
+    @Test
+    public void parseTodo_unicodeAndPunctuation_preserved() throws LilyException {
+        Task task = Parser.parseTodo("todo Buy café snacks: 茶, cake & milk!");
+
+        assertEquals("Buy café snacks: 茶, cake & milk!", task.getDescription());
+    }
+
+    @Test
+    public void parseDeadline_singleByClause_parsedSuccessfully() throws LilyException {
+        Task task = Parser.parseDeadline("deadline Submit report /by 2026-09-20 1800");
+
+        assertEquals("Submit report", task.getDescription());
+    }
+
+    @Test
+    public void parseDeadline_missingOrDuplicatedByClause_exceptionThrown() {
+        assertThrows(LilyException.class,
+                () -> Parser.parseDeadline("deadline Submit report 2026-09-20"));
+        assertThrows(LilyException.class,
+                () -> Parser.parseDeadline("deadline Submit /by report /by 2026-09-20"));
+    }
+
+    @Test
+    public void parseDeadline_misplacedByClause_exceptionThrown() {
+        LilyException noDescription = assertThrows(LilyException.class,
+                () -> Parser.parseDeadline("deadline /by 2026-09-20"));
+        LilyException noDate = assertThrows(LilyException.class,
+                () -> Parser.parseDeadline("deadline Submit report /by"));
+
+        assertEquals("Add a description for the deadline task.", noDescription.getMessage());
+        assertEquals("Add a date/time after '/by'.", noDate.getMessage());
+    }
+
+    @Test
+    public void parseEvent_clausesExactlyOnceAndInOrder_parsedSuccessfully() throws LilyException {
+        Event event = assertInstanceOf(Event.class, Parser.parseEvent(
+                "event Pair programming /from 2026-09-20 1400 /to 2026-09-20 1600"));
+
+        assertEquals("Pair programming", event.getDescription());
+    }
+
+    @Test
+    public void parseEvent_equalStartAndEnd_accepted() throws LilyException {
+        Event event = assertInstanceOf(Event.class, Parser.parseEvent(
+                "event Instant reminder /from 2026-09-20 1400 /to 2026-09-20 1400"));
+
+        assertEquals(LocalDateTime.of(2026, 9, 20, 14, 0), event.getFrom());
+        assertEquals(event.getFrom(), event.getTo());
+    }
+
+    @Test
+    public void parseEvent_missingOrDuplicatedClause_exceptionThrown() {
+        assertThrows(LilyException.class,
+                () -> Parser.parseEvent("event Meeting /from 2026-09-20"));
+        assertThrows(LilyException.class, () -> Parser.parseEvent(
+                "event Meeting /from 2026-09-20 /from 2026-09-21 /to 2026-09-22"));
+        assertThrows(LilyException.class, () -> Parser.parseEvent(
+                "event Meeting /from 2026-09-20 /to 2026-09-21 /to 2026-09-22"));
+    }
+
+    @Test
+    public void parseEvent_toBeforeFromClause_exceptionThrown() {
+        LilyException thrown = assertThrows(LilyException.class, () -> Parser.parseEvent(
+                "event Meeting /to 2026-09-21 /from 2026-09-20"));
+
+        assertEquals("Place '/from' before '/to': "
+                + "event <description> /from <start> /to <end>.", thrown.getMessage());
+    }
+
+    @Test
+    public void parseEvent_missingClauseValue_exceptionThrown() {
+        LilyException noStart = assertThrows(LilyException.class,
+                () -> Parser.parseEvent("event Meeting /from /to 2026-09-21"));
+        LilyException noEnd = assertThrows(LilyException.class,
+                () -> Parser.parseEvent("event Meeting /from 2026-09-20 /to"));
+
+        assertEquals("Add a date/time after '/from'.", noStart.getMessage());
+        assertEquals("Add a date/time after '/to'.", noEnd.getMessage());
+    }
+
+    @Test
+    public void parseEvent_extraTextAfterEndDate_exceptionThrown() {
+        assertThrows(LilyException.class, () -> Parser.parseEvent(
+                "event Meeting /from 2026-09-20 /to 2026-09-21 unexpected"));
     }
 
     @Test
