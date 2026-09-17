@@ -2,6 +2,7 @@ package lily.parser;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Locale;
 
 import lily.exception.LilyException;
 import lily.task.Deadline;
@@ -25,24 +26,37 @@ import lily.ui.Ui;
  * place.
  */
 public class Parser {
+    private static final String COMMAND_SPACING_ERROR =
+            "Use single spaces between words, without leading or trailing spaces.";
+
     private Parser() {
         // Static utility class; no instances.
     }
 
     /**
-     * Returns the command word: the first whitespace-separated token of the input.
+     * Validates the spacing of a complete command and separates its command word
+     * from its arguments. Command words are case-insensitive, while argument text
+     * retains its original case.
+     *
+     * @param userInput complete command typed by the user
+     * @return the normalized command word and case-preserved argument text
+     * @throws LilyException if the command uses leading, trailing, repeated, or
+     *                       non-space whitespace
      */
-    public static String getCommandWord(String userInput) {
-        return userInput.split(" ", 2)[0];
-    }
+    public static ParsedCommand parseCommand(String userInput) throws LilyException {
+        if (userInput == null || userInput.isBlank()) {
+            throw new LilyException("Please enter a command.");
+        }
+        if (!userInput.equals(userInput.trim()) || userInput.contains("  ")
+                || userInput.chars().anyMatch(character -> Character.isWhitespace(character)
+                        && character != ' ')) {
+            throw new LilyException(COMMAND_SPACING_ERROR);
+        }
 
-    /**
-     * Returns everything after the command word, trimmed, or {@code ""} if there is
-     * none.
-     */
-    public static String getArguments(String userInput) {
         String[] parts = userInput.split(" ", 2);
-        return parts.length > 1 ? parts[1].trim() : "";
+        String commandWord = parts[0].toLowerCase(Locale.ROOT);
+        String arguments = parts.length == 2 ? parts[1] : "";
+        return new ParsedCommand(commandWord, arguments);
     }
 
     /**
@@ -52,11 +66,22 @@ public class Parser {
      * @throws LilyException if the argument is not a valid integer
      */
     public static int parseTaskIndex(String argument) throws LilyException {
-        try {
-            return Integer.parseInt(argument) - 1;
-        } catch (NumberFormatException e) {
-            throw new LilyException("Please provide a valid task number.");
+        if (argument == null || !argument.matches("[0-9]+")) {
+            throw new LilyException("Please provide one positive whole-number task number.");
         }
+        try {
+            int oneBasedIndex = Integer.parseInt(argument);
+            if (oneBasedIndex == 0) {
+                throw new LilyException("Please provide one positive whole-number task number.");
+            }
+            return oneBasedIndex - 1;
+        } catch (NumberFormatException e) {
+            throw new LilyException("That task number is too large.");
+        }
+    }
+
+    /** A command word paired with its original, case-preserved argument text. */
+    public record ParsedCommand(String commandWord, String arguments) {
     }
 
     /** Parses a date argument for the schedule command. */

@@ -35,6 +35,62 @@ class LilyTest {
     }
 
     @Test
+    void getResponse_mixedCaseCommand_commandRecognizedAndDescriptionCasePreserved() {
+        Lily lily = new Lily(temporaryDirectory.resolve("lily.txt").toString());
+
+        lily.getResponse("ToDo Read Java Book");
+
+        assertTrue(lily.getResponse("LIST").contains("Read Java Book"));
+    }
+
+    @Test
+    void getResponse_invalidSpacing_returnsClearFormatMessage() {
+        Lily lily = new Lily(temporaryDirectory.resolve("lily.txt").toString());
+        String expected = "Use single spaces between words, without leading or trailing spaces.";
+
+        assertEquals(expected, lily.getResponse(" list"));
+        assertEquals(expected, lily.getResponse("list "));
+        assertEquals(expected, lily.getResponse("todo  read book"));
+    }
+
+    @Test
+    void getResponse_noArgumentCommandWithArgument_rejected() {
+        Lily lily = new Lily(temporaryDirectory.resolve("lily.txt").toString());
+
+        assertEquals("The 'list' command does not accept arguments.", lily.getResponse("list now"));
+        assertEquals("The 'bye' command does not accept arguments.", lily.getResponse("bye now"));
+    }
+
+    @Test
+    void getResponse_indexCommandsWithInvalidIndexes_rejectedBeforeListAccess() {
+        Lily lily = new Lily(temporaryDirectory.resolve("lily.txt").toString());
+        String expected = "Please provide one positive whole-number task number.";
+
+        assertEquals(expected, lily.getResponse("mark 0"));
+        assertEquals(expected, lily.getResponse("unmark -1"));
+        assertEquals(expected, lily.getResponse("delete +2"));
+        assertEquals(expected, lily.getResponse("mark 2.0"));
+        assertEquals(expected, lily.getResponse("delete 2 3"));
+    }
+
+    @Test
+    void getResponse_findAndScheduleWithTooManyArguments_rejected() {
+        Lily lily = new Lily(temporaryDirectory.resolve("lily.txt").toString());
+
+        assertEquals("The 'find' command accepts exactly one argument.",
+                lily.getResponse("find read book"));
+        assertEquals("The 'schedule' command accepts at most one argument.",
+                lily.getResponse("schedule today extra"));
+    }
+
+    @Test
+    void getResponse_caseInsensitiveBye_returnsGoodbye() {
+        Lily lily = new Lily(temporaryDirectory.resolve("lily.txt").toString());
+
+        assertEquals(Lily.GOODBYE_MESSAGE, lily.getResponse("BYE"));
+    }
+
+    @Test
     void getResponse_schedule_ordersAndGroupsDatedTasksWithOriginalNumbers() {
         Lily lily = new Lily(temporaryDirectory.resolve("lily.txt").toString());
         lily.getResponse("todo undated task");

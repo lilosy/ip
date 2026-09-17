@@ -11,6 +11,7 @@ import java.util.List;
 import lily.exception.LilyException;
 import lily.parser.DateTimeParser;
 import lily.parser.Parser;
+import lily.parser.Parser.ParsedCommand;
 import lily.storage.Storage;
 import lily.task.Deadline;
 import lily.task.Event;
@@ -52,16 +53,12 @@ public class Lily {
      * @return a human-readable reply
      */
     public String getResponse(String input) {
-        String userInput = input == null ? "" : input.trim();
-        if (userInput.isEmpty()) {
+        if (input == null || input.isBlank()) {
             return "Please enter a command.";
-        }
-        if (userInput.equals("bye")) {
-            return GOODBYE_MESSAGE;
         }
 
         try {
-            CommandResult result = executeCommand(userInput);
+            CommandResult result = executeCommand(input);
             if (result.changedTaskList()) {
                 storage.save(tasks.toList());
             }
@@ -75,10 +72,15 @@ public class Lily {
 
     /** Executes a parsed command without performing persistence. */
     private CommandResult executeCommand(String userInput) throws LilyException {
-        String command = Parser.getCommandWord(userInput);
-        String argument = Parser.getArguments(userInput);
+        ParsedCommand parsedCommand = Parser.parseCommand(userInput);
+        String command = parsedCommand.commandWord();
+        String argument = parsedCommand.arguments();
         switch (command) {
+        case "bye":
+            requireNoArguments(command, argument);
+            return unchanged(GOODBYE_MESSAGE);
         case "list":
+            requireNoArguments(command, argument);
             return unchanged(formatTaskList(tasks.toList(), "Here's your little garden of tasks:"));
         case "mark":
             return changeTaskStatus(argument, true);
@@ -93,6 +95,7 @@ public class Lily {
         case "find":
             return findTasks(argument);
         case "schedule":
+            requireAtMostOneArgument(command, argument);
             return showSchedule(argument);
         default:
             return unchanged("I’m not quite sure how to tend to that. Try `list`, `todo`, `deadline`, or `event`.");
@@ -138,6 +141,7 @@ public class Lily {
         if (argument.isEmpty()) {
             throw new LilyException("Please provide a keyword to search for.");
         }
+        requireSingleArgument("find", argument);
         return unchanged(formatTaskList(tasks.findTasks(argument), "Here are the matching tasks in your list:"));
     }
 
@@ -224,6 +228,27 @@ public class Lily {
         return Parser.parseTaskIndex(argument);
     }
 
+    /** Rejects arguments supplied to a command that accepts none. */
+    private void requireNoArguments(String command, String argument) throws LilyException {
+        if (!argument.isEmpty()) {
+            throw new LilyException("The '" + command + "' command does not accept arguments.");
+        }
+    }
+
+    /** Rejects commands whose optional/required argument contains another token. */
+    private void requireAtMostOneArgument(String command, String argument) throws LilyException {
+        if (argument.contains(" ")) {
+            throw new LilyException("The '" + command + "' command accepts at most one argument.");
+        }
+    }
+
+    /** Rejects a command argument containing more than one token. */
+    private void requireSingleArgument(String command, String argument) throws LilyException {
+        if (argument.contains(" ")) {
+            throw new LilyException("The '" + command + "' command accepts exactly one argument.");
+        }
+    }
+
     private String formatTaskList(List<Task> taskList, String heading) {
         if (taskList.isEmpty()) {
             return "Your list is clear—a peaceful patch of soil.";
@@ -256,7 +281,7 @@ public class Lily {
             }
             String response = getResponse(userInput);
             ui.showResponse(response);
-            if (userInput.trim().equals("bye")) {
+            if (response.equals(GOODBYE_MESSAGE)) {
                 break;
             }
         }

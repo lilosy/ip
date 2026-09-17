@@ -7,16 +7,49 @@ import lily.exception.LilyException;
 import org.junit.jupiter.api.Test;
 
 /**
- * Tests {@link Parser#parseTaskIndex(String)}.
+ * Tests Lily's central command tokenizer and task-index validation.
  *
- * <p>This method was chosen because it is a small, pure function: given the same input
- * it always produces the same output, it has no side effects (no I/O, no printing, no
- * shared state), and it has a clearly enumerable set of edge cases around what Java
- * considers a "parsable integer" versus what Lily's command syntax expects a task
- * number to look like. That combination makes it easy to test exhaustively and in
- * isolation, with no mocking or fixtures required.
+ * <p>These parser methods are pure functions: given the same input they always produce
+ * the same output, have no side effects, and have clearly enumerable command-format
+ * edge cases. That makes them valuable to test directly without mocks or fixtures.
  */
 public class ParserTest {
+
+    @Test
+    public void parseCommand_mixedCaseCommand_normalizesCommandAndPreservesArguments() throws LilyException {
+        Parser.ParsedCommand command = Parser.parseCommand("ToDo Read Java Book");
+
+        assertEquals("todo", command.commandWord());
+        assertEquals("Read Java Book", command.arguments());
+    }
+
+    @Test
+    public void parseCommand_commandWithoutArguments_returnsEmptyArgument() throws LilyException {
+        Parser.ParsedCommand command = Parser.parseCommand("LIST");
+
+        assertEquals("list", command.commandWord());
+        assertEquals("", command.arguments());
+    }
+
+    @Test
+    public void parseCommand_leadingWhitespace_exceptionThrown() {
+        assertSpacingError(" list");
+    }
+
+    @Test
+    public void parseCommand_trailingWhitespace_exceptionThrown() {
+        assertSpacingError("list ");
+    }
+
+    @Test
+    public void parseCommand_repeatedSpaces_exceptionThrown() {
+        assertSpacingError("todo  read book");
+    }
+
+    @Test
+    public void parseCommand_tabInsteadOfSpace_exceptionThrown() {
+        assertSpacingError("todo\tread book");
+    }
 
     @Test
     public void parseTaskIndex_singleDigit_returnsZeroBasedIndex() throws LilyException {
@@ -31,76 +64,69 @@ public class ParserTest {
 
     @Test
     public void parseTaskIndex_leadingZeros_parsedAsDecimal() throws LilyException {
-        // "007" is a valid decimal integer to Java's parser (not octal), so this must
-        // succeed rather than throw.
         assertEquals(6, Parser.parseTaskIndex("007"));
     }
 
     @Test
-    public void parseTaskIndex_explicitPlusSign_parsedSuccessfully() throws LilyException {
-        // Integer.parseInt accepts a leading '+' as a valid sign character; this test
-        // documents that parseTaskIndex inherits that (slightly surprising) leniency.
-        assertEquals(4, Parser.parseTaskIndex("+5"));
+    public void parseTaskIndex_explicitPlusSign_exceptionThrown() {
+        assertInvalidTaskNumber("+5");
     }
 
     @Test
-    public void parseTaskIndex_zero_returnsNegativeOneWithoutThrowing() throws LilyException {
-        // parseTaskIndex only validates that the text is a well-formed integer; it does
-        // not know about the task list, so it does not reject an out-of-range result
-        // such as the one produced by 1-based "0". Range checking is TaskList's job
-        // (see TaskList#containsIndex), so this method must return -1 here, not throw.
-        assertEquals(-1, Parser.parseTaskIndex("0"));
+    public void parseTaskIndex_zero_exceptionThrown() {
+        assertInvalidTaskNumber("0");
     }
 
     @Test
-    public void parseTaskIndex_negativeNumber_returnsNegativeIndexWithoutThrowing() throws LilyException {
-        // Same reasoning as the zero case: "-5" is a well-formed integer, so no
-        // exception is thrown here even though the resulting index is nonsensical as a
-        // task position.
-        assertEquals(-6, Parser.parseTaskIndex("-5"));
+    public void parseTaskIndex_negativeNumber_exceptionThrown() {
+        assertInvalidTaskNumber("-5");
     }
 
     @Test
     public void parseTaskIndex_nonNumericText_exceptionThrown() {
-        LilyException thrown = assertThrows(LilyException.class, () -> Parser.parseTaskIndex("abc"));
-        assertEquals("Please provide a valid task number.", thrown.getMessage());
+        assertInvalidTaskNumber("abc");
     }
 
     @Test
     public void parseTaskIndex_emptyString_exceptionThrown() {
-        assertThrows(LilyException.class, () -> Parser.parseTaskIndex(""));
+        assertInvalidTaskNumber("");
     }
 
     @Test
     public void parseTaskIndex_blankWhitespaceOnly_exceptionThrown() {
-        // Integer.parseInt does not trim its input, so a space-only argument is not a
-        // parsable integer even though it "looks empty".
-        assertThrows(LilyException.class, () -> Parser.parseTaskIndex(" "));
+        assertInvalidTaskNumber(" ");
     }
 
     @Test
     public void parseTaskIndex_surroundingWhitespace_exceptionThrown() {
-        // Documents that parseTaskIndex does not trim its argument: " 5 " is rejected
-        // even though "5" alone would succeed. Callers are expected to trim first (as
-        // Parser.getArguments already does for the text that normally reaches here).
-        assertThrows(LilyException.class, () -> Parser.parseTaskIndex(" 5 "));
+        assertInvalidTaskNumber(" 5 ");
     }
 
     @Test
     public void parseTaskIndex_decimalNumber_exceptionThrown() {
-        assertThrows(LilyException.class, () -> Parser.parseTaskIndex("1.5"));
+        assertInvalidTaskNumber("1.5");
     }
 
     @Test
     public void parseTaskIndex_valueOverflowsInt_exceptionThrown() {
-        // Larger than Integer.MAX_VALUE; Integer.parseInt reports this the same way as
-        // any other unparsable string (NumberFormatException), which parseTaskIndex
-        // converts to the same LilyException as every other invalid case.
-        assertThrows(LilyException.class, () -> Parser.parseTaskIndex("99999999999999999999"));
+        LilyException thrown = assertThrows(LilyException.class,
+                () -> Parser.parseTaskIndex("99999999999999999999"));
+        assertEquals("That task number is too large.", thrown.getMessage());
     }
 
     @Test
     public void parseTaskIndex_nullArgument_exceptionThrown() {
-        assertThrows(LilyException.class, () -> Parser.parseTaskIndex(null));
+        assertInvalidTaskNumber(null);
+    }
+
+    private static void assertSpacingError(String input) {
+        LilyException thrown = assertThrows(LilyException.class, () -> Parser.parseCommand(input));
+        assertEquals("Use single spaces between words, without leading or trailing spaces.",
+                thrown.getMessage());
+    }
+
+    private static void assertInvalidTaskNumber(String input) {
+        LilyException thrown = assertThrows(LilyException.class, () -> Parser.parseTaskIndex(input));
+        assertEquals("Please provide one positive whole-number task number.", thrown.getMessage());
     }
 }
