@@ -30,6 +30,12 @@ public class DeadlineTest {
     }
 
     @Test
+    public void toString_explicitMidnight_displaysTime() {
+        Deadline deadline = new Deadline("return book", LocalDateTime.of(2019, 10, 15, 0, 0), true);
+        assertEquals("[D][ ] return book (by: Oct 15 2019, 12:00AM)", deadline.toString());
+    }
+
+    @Test
     public void toString_markedDone_showsXInBox() {
         Deadline deadline = new Deadline("return book", LocalDateTime.of(2019, 10, 15, 0, 0));
         deadline.markAsDone();
@@ -39,7 +45,7 @@ public class DeadlineTest {
     @Test
     public void toFileString_usesFixedStorageDateFormatNotDisplayFormat() {
         Deadline deadline = new Deadline("return book", LocalDateTime.of(2019, 12, 2, 18, 0));
-        assertEquals("D | 0 | return book | 2019-12-02T18:00", deadline.toFileString());
+        assertEquals("D | 0 | return book | 2019-12-02T18:00 | true", deadline.toFileString());
     }
 
     @Test
@@ -47,6 +53,6 @@ public class DeadlineTest {
         // Without escaping, a literal "|" in the description would be indistinguishable
         // from a field delimiter and corrupt the record on the next load.
         Deadline deadline = new Deadline("return book | pay fine", LocalDateTime.of(2019, 10, 15, 0, 0));
-        assertEquals("D | 0 | return book \\| pay fine | 2019-10-15T00:00", deadline.toFileString());
+        assertEquals("D | 0 | return book \\| pay fine | 2019-10-15T00:00 | false", deadline.toFileString());
     }
 }

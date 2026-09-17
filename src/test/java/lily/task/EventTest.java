@@ -31,6 +31,14 @@ public class EventTest {
     }
 
     @Test
+    public void toString_explicitMidnight_displaysTime() {
+        Event event = new Event("midnight meeting", LocalDateTime.of(2019, 8, 6, 0, 0), true,
+                LocalDateTime.of(2019, 8, 7, 0, 0), true);
+        assertEquals("[E][ ] midnight meeting (from: Aug 06 2019, 12:00AM to: Aug 07 2019, 12:00AM)",
+                event.toString());
+    }
+
+    @Test
     public void toString_markedDone_showsXInBox() {
         Event event = new Event("project meeting",
                 LocalDateTime.of(2019, 8, 6, 14, 0), LocalDateTime.of(2019, 8, 6, 16, 0));
@@ -43,14 +51,14 @@ public class EventTest {
     public void toFileString_usesFixedStorageDateFormatForBothDates() {
         Event event = new Event("project meeting",
                 LocalDateTime.of(2019, 8, 6, 14, 0), LocalDateTime.of(2019, 8, 6, 16, 0));
-        assertEquals("E | 0 | project meeting | 2019-08-06T14:00 | 2019-08-06T16:00", event.toFileString());
+        assertEquals("E | 0 | project meeting | 2019-08-06T14:00 | 2019-08-06T16:00 | true | true", event.toFileString());
     }
 
     @Test
     public void toFileString_descriptionContainingBackslash_backslashIsEscaped() {
         Event event = new Event("meet \\ discuss roadmap",
                 LocalDateTime.of(2019, 8, 6, 14, 0), LocalDateTime.of(2019, 8, 6, 16, 0));
-        assertEquals("E | 0 | meet \\\\ discuss roadmap | 2019-08-06T14:00 | 2019-08-06T16:00",
+        assertEquals("E | 0 | meet \\\\ discuss roadmap | 2019-08-06T14:00 | 2019-08-06T16:00 | true | true",
                 event.toFileString());
     }
 }

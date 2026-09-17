@@ -26,41 +26,44 @@ public class DateTimeParserTest {
 
     @Test
     public void parseUserInput_isoDateOnly_parsedAsMidnight() throws LilyException {
-        assertEquals(LocalDateTime.of(2019, 10, 15, 0, 0), DateTimeParser.parseUserInput("2019-10-15"));
+        DateTimeParser.ParsedDateTime parsed = DateTimeParser.parseUserInput("2019-10-15");
+        assertEquals(LocalDateTime.of(2019, 10, 15, 0, 0), parsed.value());
+        assertEquals(false, parsed.hasExplicitTime());
     }
 
     @Test
     public void parseUserInput_isoDateWithTime_parsedWithGivenTime() throws LilyException {
-        assertEquals(LocalDateTime.of(2019, 10, 15, 18, 0),
-                DateTimeParser.parseUserInput("2019-10-15 1800"));
+        DateTimeParser.ParsedDateTime parsed = DateTimeParser.parseUserInput("2019-10-15 1800");
+        assertEquals(LocalDateTime.of(2019, 10, 15, 18, 0), parsed.value());
+        assertEquals(true, parsed.hasExplicitTime());
     }
 
     @Test
     public void parseUserInput_isoDateUnpaddedMonthAndDay_stillParsed() throws LilyException {
-        assertEquals(LocalDateTime.of(2019, 2, 9, 0, 0), DateTimeParser.parseUserInput("2019-2-9"));
+        assertEquals(LocalDateTime.of(2019, 2, 9, 0, 0), DateTimeParser.parseUserInput("2019-2-9").value());
     }
 
     @Test
     public void parseUserInput_slashDateOnly_parsedAsMidnight() throws LilyException {
         // d/M/uuuu: day first, then month, matching the class's documented format.
-        assertEquals(LocalDateTime.of(2019, 12, 2, 0, 0), DateTimeParser.parseUserInput("2/12/2019"));
+        assertEquals(LocalDateTime.of(2019, 12, 2, 0, 0), DateTimeParser.parseUserInput("2/12/2019").value());
     }
 
     @Test
     public void parseUserInput_slashDateWithTime_parsedWithGivenTime() throws LilyException {
         assertEquals(LocalDateTime.of(2019, 12, 2, 18, 0),
-                DateTimeParser.parseUserInput("2/12/2019 1800"));
+                DateTimeParser.parseUserInput("2/12/2019 1800").value());
     }
 
     @Test
     public void parseUserInput_slashDateZeroPadded_stillParsed() throws LilyException {
-        assertEquals(LocalDateTime.of(2019, 12, 2, 0, 0), DateTimeParser.parseUserInput("02/12/2019"));
+        assertEquals(LocalDateTime.of(2019, 12, 2, 0, 0), DateTimeParser.parseUserInput("02/12/2019").value());
     }
 
     @Test
     public void parseUserInput_surroundingWhitespace_isTrimmedBeforeParsing() throws LilyException {
         assertEquals(LocalDateTime.of(2019, 10, 15, 0, 0),
-                DateTimeParser.parseUserInput("  2019-10-15  "));
+                DateTimeParser.parseUserInput("  2019-10-15  ").value());
     }
 
     // ----- parseUserInput: STRICT resolution rejects impossible dates -----
@@ -74,7 +77,7 @@ public class DateTimeParserTest {
 
     @Test
     public void parseUserInput_february29OnLeapYear_parsedSuccessfully() throws LilyException {
-        assertEquals(LocalDateTime.of(2020, 2, 29, 0, 0), DateTimeParser.parseUserInput("2020-02-29"));
+        assertEquals(LocalDateTime.of(2020, 2, 29, 0, 0), DateTimeParser.parseUserInput("2020-02-29").value());
     }
 
     @Test
@@ -85,6 +88,13 @@ public class DateTimeParserTest {
     @Test
     public void parseUserInput_hourTwentyFive_exceptionThrown() {
         assertThrows(LilyException.class, () -> DateTimeParser.parseUserInput("2019-10-15 2500"));
+    }
+
+    @Test
+    public void parseUserInput_explicitMidnight_marksTimeAsExplicit() throws LilyException {
+        DateTimeParser.ParsedDateTime parsed = DateTimeParser.parseUserInput("2019-10-15 0000");
+        assertEquals(LocalDateTime.of(2019, 10, 15, 0, 0), parsed.value());
+        assertEquals(true, parsed.hasExplicitTime());
     }
 
     // ----- parseUserInput: adjacent-value parsing requires a zero-padded time -----

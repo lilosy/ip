@@ -18,8 +18,8 @@ import lily.task.Task;
 import lily.task.ToDo;
 
 /**
- * Parses user-supplied date/time text (for deadlines and events) into
- * {@link LocalDateTime},
+ * Parses user-supplied date/time text (for deadlines and events) into a
+ * {@link ParsedDateTime},
  * and formats {@link LocalDateTime} values for saving to disk or displaying to
  * the user.
  *
@@ -107,8 +107,8 @@ public class DateTimeParser {
     /**
      * Parses user-typed text such as {@code "2019-10-15"} or
      * {@code "2/12/2019 1800"}
-     * into a {@link LocalDateTime}. A date with no time component is taken to mean
-     * midnight.
+     * into a {@link ParsedDateTime}. A date with no time component is taken to mean
+     * midnight and marked as not having an explicitly entered time.
      *
      * @param rawInput the raw text typed after {@code /by}, {@code /from}, or
      *                 {@code /to}
@@ -116,20 +116,21 @@ public class DateTimeParser {
      *                       format,
      *                       or describes an impossible date (e.g. 31 February)
      */
-    public static LocalDateTime parseUserInput(String rawInput) throws LilyException {
+    public static ParsedDateTime parseUserInput(String rawInput) throws LilyException {
         if (rawInput == null || rawInput.isBlank()) {
             throw new LilyException("A date/time is required.");
         }
         String trimmed = rawInput.trim();
 
-        for (DateTimeFormatter format : INPUT_FORMATS) {
+        for (int formatIndex = 0; formatIndex < INPUT_FORMATS.length; formatIndex++) {
+            DateTimeFormatter format = INPUT_FORMATS[formatIndex];
             try {
                 TemporalAccessor parsed = format.parse(trimmed);
                 LocalDate date = LocalDate.from(parsed);
                 LocalTime time = parsed.isSupported(ChronoField.HOUR_OF_DAY)
                         ? LocalTime.from(parsed)
                         : LocalTime.MIDNIGHT;
-                return LocalDateTime.of(date, time);
+                return new ParsedDateTime(LocalDateTime.of(date, time), formatIndex < 2 || formatIndex == 4);
             } catch (DateTimeException ignored) {
                 // Covers both DateTimeParseException (text doesn't match the pattern) and
                 // a plain DateTimeException (text matches the pattern but describes an
@@ -139,6 +140,10 @@ public class DateTimeParser {
 
         throw new LilyException("I couldn't understand the date/time '" + rawInput
                 + "'. Try formats like: 2019-10-15, 2019-10-15 1800, or 2/12/2019 1800.");
+    }
+
+    /** A parsed date/time together with whether the user explicitly typed its time. */
+    public record ParsedDateTime(LocalDateTime value, boolean hasExplicitTime) {
     }
 
     /**
@@ -201,7 +206,15 @@ public class DateTimeParser {
      * midnight.
      */
     public static String formatForDisplay(LocalDateTime dateTime) {
-        return dateTime.toLocalTime().equals(LocalTime.MIDNIGHT)
+        return formatForDisplay(dateTime, !dateTime.toLocalTime().equals(LocalTime.MIDNIGHT));
+    }
+
+    /**
+     * Formats a date/time for display, retaining an explicitly entered midnight
+     * time while still rendering date-only input without a time.
+     */
+    public static String formatForDisplay(LocalDateTime dateTime, boolean hasExplicitTime) {
+        return !hasExplicitTime
                 ? dateTime.format(DISPLAY_DATE_ONLY)
                 : dateTime.format(DISPLAY_DATE_TIME);
     }

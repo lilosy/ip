@@ -1,7 +1,6 @@
 package lily.parser;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.Locale;
 
 import lily.exception.LilyException;
@@ -119,8 +118,8 @@ public class Parser {
             throw new LilyException("Add a date/time after '/by'.");
         }
 
-        LocalDateTime by = DateTimeParser.parseUserInput(deadlineParts[1]);
-        return new Deadline(description, by);
+        DateTimeParser.ParsedDateTime by = DateTimeParser.parseUserInput(deadlineParts[1]);
+        return new Deadline(description, by.value(), by.hasExplicitTime());
     }
 
     /**
@@ -144,12 +143,12 @@ public class Parser {
             throw new LilyException("Add a date/time after '/to'.");
         }
 
-        LocalDateTime from = DateTimeParser.parseUserInput(eventParts[1]);
-        LocalDateTime to = DateTimeParser.parseUserInput(eventParts[2]);
-        if (to.isBefore(from)) {
+        DateTimeParser.ParsedDateTime from = DateTimeParser.parseUserInput(eventParts[1]);
+        DateTimeParser.ParsedDateTime to = DateTimeParser.parseUserInput(eventParts[2]);
+        if (to.value().isBefore(from.value())) {
             throw new LilyException("The event's 'to' time can't be before its 'from' time.");
         }
-        return new Event(description, from, to);
+        return new Event(description, from.value(), from.hasExplicitTime(), to.value(), to.hasExplicitTime());
     }
 
     /** Validates the event clauses and separates the description, start, and end text. */

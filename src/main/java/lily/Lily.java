@@ -197,13 +197,12 @@ public class Lily {
             if (task instanceof Deadline deadline
                     && deadline.getBy().toLocalDate().equals(selectedDate)) {
                 entries.add(new ScheduleEntry(i + 1, task,
-                        deadline.getBy().toLocalTime().equals(LocalTime.MIDNIGHT),
+                        !deadline.hasExplicitTime(),
                         deadline.getBy().toLocalTime()));
             } else if (task instanceof Event event
                     && !selectedDate.isBefore(event.getFrom().toLocalDate())
                     && !selectedDate.isAfter(event.getTo().toLocalDate())) {
-                boolean hasNoDisplayedTime = event.getFrom().toLocalTime().equals(LocalTime.MIDNIGHT)
-                        && event.getTo().toLocalTime().equals(LocalTime.MIDNIGHT);
+                boolean hasNoDisplayedTime = !event.hasExplicitFromTime() && !event.hasExplicitToTime();
                 LocalTime effectiveTime = event.getFrom().toLocalDate().isBefore(selectedDate)
                         ? LocalTime.MIDNIGHT : event.getFrom().toLocalTime();
                 entries.add(new ScheduleEntry(i + 1, task, hasNoDisplayedTime, effectiveTime));

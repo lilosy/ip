@@ -48,6 +48,17 @@ class LilyTest {
     }
 
     @Test
+    void getResponse_explicitMidnight_remainsVisibleAfterRestart() {
+        Path saveFile = temporaryDirectory.resolve("lily.txt");
+        Lily lily = new Lily(saveFile.toString());
+        lily.getResponse("deadline midnight deployment /by 2026-09-20 0000");
+
+        Lily restartedLily = new Lily(saveFile.toString());
+
+        assertTrue(restartedLily.getResponse("list").contains("Sep 20 2026, 12:00AM"));
+    }
+
+    @Test
     void getResponse_unknownCommand_returnsGardenThemedGuidance() {
         Lily lily = new Lily(temporaryDirectory.resolve("lily.txt").toString());
 

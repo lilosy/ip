@@ -110,9 +110,17 @@ public class StorageTest {
 
         List<Task> loaded = storage.load();
         assertEquals(2, loaded.size());
-        assertEquals("D | 0 | return book | 2019-10-15T00:00", loaded.get(0).toFileString());
-        assertEquals("E | 0 | project meeting | 2019-08-06T14:00 | 2019-08-06T16:00",
+        assertEquals("D | 0 | return book | 2019-10-15T00:00 | false", loaded.get(0).toFileString());
+        assertEquals("E | 0 | project meeting | 2019-08-06T14:00 | 2019-08-06T16:00 | true | true",
                 loaded.get(1).toFileString());
+    }
+
+    @Test
+    public void saveThenLoad_explicitMidnight_preservesDisplayIntent(@TempDir Path tempDir) throws IOException {
+        Storage storage = storageIn(tempDir.resolve("lily.txt"));
+        storage.save(List.of(new Deadline("midnight deployment", LocalDateTime.of(2019, 10, 15, 0, 0), true)));
+
+        assertEquals("[D][ ] midnight deployment (by: Oct 15 2019, 12:00AM)", storage.load().get(0).toString());
     }
 
     @Test

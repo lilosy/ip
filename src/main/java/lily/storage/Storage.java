@@ -428,14 +428,17 @@ public class Storage {
     }
 
     private static Task createDeadline(String[] fields) throws LilyException {
-        requireFieldCount(fields, 4, "deadline");
+        requireFieldCount(fields, 4, 5, "deadline");
         requireNonBlank(fields, 2, "description");
         requireNonBlank(fields, 3, "'by' date");
-        return new Deadline(fields[2], DateTimeParser.parseStorageFormat(fields[3]));
+        LocalDateTime by = DateTimeParser.parseStorageFormat(fields[3]);
+        boolean hasExplicitTime = fields.length == 5
+                ? parseExplicitTimeFlag(fields[4]) : !by.toLocalTime().equals(java.time.LocalTime.MIDNIGHT);
+        return new Deadline(fields[2], by, hasExplicitTime);
     }
 
     private static Task createEvent(String[] fields) throws LilyException {
-        requireFieldCount(fields, 5, "event");
+        requireFieldCount(fields, 5, 7, "event");
         requireNonBlank(fields, 2, "description");
         requireNonBlank(fields, 3, "'from' time");
         requireNonBlank(fields, 4, "'to' time");
@@ -444,7 +447,11 @@ public class Storage {
         if (to.isBefore(from)) {
             throw new LilyException("event 'to' time cannot be before its 'from' time");
         }
-        return new Event(fields[2], from, to);
+        boolean hasExplicitFromTime = fields.length == 7
+                ? parseExplicitTimeFlag(fields[5]) : !from.toLocalTime().equals(java.time.LocalTime.MIDNIGHT);
+        boolean hasExplicitToTime = fields.length == 7
+                ? parseExplicitTimeFlag(fields[6]) : !to.toLocalTime().equals(java.time.LocalTime.MIDNIGHT);
+        return new Event(fields[2], from, hasExplicitFromTime, to, hasExplicitToTime);
     }
 
     /** Restores a task's persisted completion state after it has been constructed. */
@@ -454,6 +461,22 @@ public class Storage {
         }
     }
 
+    private static boolean parseExplicitTimeFlag(String field) throws LilyException {
+        if (!field.equals("true") && !field.equals("false")) {
+            throw new LilyException("explicit-time flag must be 'true' or 'false'");
+        }
+        return Boolean.parseBoolean(field);
+    }
+
+    private static void requireFieldCount(String[] fields, int legacyExpected, int expected, String taskTypeName)
+            throws LilyException {
+        if (fields.length != legacyExpected && fields.length != expected) {
+            throw new LilyException(taskTypeName + " record needs " + legacyExpected + " or " + expected
+                    + " fields, found " + fields.length);
+        }
+    }
+
+    /** Requires an exact record width for task types whose format has not changed. */
     private static void requireFieldCount(String[] fields, int expected, String taskTypeName)
             throws LilyException {
         if (fields.length != expected) {
