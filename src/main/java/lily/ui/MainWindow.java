@@ -24,7 +24,7 @@ public class MainWindow {
     /** Supplies the task manager used to process GUI commands. */
     public void setLily(Lily lily) {
         this.lily = lily;
-        dialogContainer.getChildren().add(DialogBox.getLilyDialog(Lily.WELCOME_MESSAGE));
+        dialogContainer.getChildren().add(DialogBox.getLilyDialog(lily.getStartupMessage()));
     }
 
     /** Adds the user's command and Lily's reply to the conversation. */

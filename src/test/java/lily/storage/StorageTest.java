@@ -9,9 +9,14 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 
+import lily.storage.Storage.LoadResult;
+import lily.storage.Storage.LoadStatus;
 import lily.task.Deadline;
 import lily.task.Event;
 import lily.task.Task;
@@ -72,6 +77,17 @@ public class StorageTest {
     public void load_fileDoesNotExist_returnsEmptyList() {
         Storage storage = storageIn(newTempFile("does-not-exist.txt"));
         assertTrue(storage.load().isEmpty());
+    }
+
+    @Test
+    public void loadWithReport_dataDirectoryMissing_distinguishedFromMissingFile(@TempDir Path tempDir) {
+        Storage missingDirectoryStorage = storageIn(tempDir.resolve("missing/lily.txt"));
+        Storage missingFileStorage = storageIn(tempDir.resolve("lily.txt"));
+
+        assertEquals(LoadStatus.DATA_DIRECTORY_MISSING,
+                missingDirectoryStorage.loadWithReport().status());
+        assertEquals(LoadStatus.SAVE_FILE_MISSING,
+                missingFileStorage.loadWithReport().status());
     }
 
     @Test
@@ -164,6 +180,19 @@ public class StorageTest {
         assertThrows(IOException.class, () -> storage.save(null));
     }
 
+    @Test
+    public void save_parentPathIsFile_reportsDirectoryCreationFailure(@TempDir Path tempDir)
+            throws IOException {
+        Path parentFile = tempDir.resolve("not-a-directory");
+        Files.writeString(parentFile, "existing file");
+        Storage storage = storageIn(parentFile.resolve("lily.txt"));
+
+        IOException thrown = assertThrows(IOException.class,
+                () -> storage.save(List.of(new ToDo("read book"))));
+
+        assertTrue(thrown.getMessage().contains("exists but is not a directory"));
+    }
+
     // ----- load: tolerance for a damaged save file -----
 
     @Test
@@ -181,6 +210,75 @@ public class StorageTest {
         assertEquals(2, loaded.size());
         assertEquals("T | 1 | read book", loaded.get(0).toFileString());
         assertEquals("T | 0 | join sports club", loaded.get(1).toFileString());
+    }
+
+    @Test
+    public void loadWithReport_malformedRecord_returnsWarningsAndPartialStatus(@TempDir Path tempDir)
+            throws IOException {
+        Path file = tempDir.resolve("lily.txt");
+        Files.write(file, List.of("T | 0 | valid", "not a task"), StandardCharsets.UTF_8);
+
+        LoadResult result = storageIn(file).loadWithReport();
+
+        assertEquals(LoadStatus.MALFORMED_RECORDS_SKIPPED, result.status());
+        assertEquals(1, result.tasks().size());
+        assertTrue(result.warnings().stream().anyMatch(message -> message.contains("line 2")));
+    }
+
+    @Test
+    public void load_malformedEscapes_recordsSkippedWithoutChangingText(@TempDir Path tempDir)
+            throws IOException {
+        Path file = tempDir.resolve("lily.txt");
+        Files.write(file, List.of(
+                "T | 0 | valid",
+                "T | 0 | unknown\\qescape",
+                "T | 0 | dangling\\",
+                "T | 0 | unescaped|pipe"
+        ), StandardCharsets.UTF_8);
+
+        LoadResult result = storageIn(file).loadWithReport();
+
+        assertEquals(1, result.tasks().size());
+        assertEquals("valid", result.tasks().get(0).getDescription());
+        assertEquals(LoadStatus.MALFORMED_RECORDS_SKIPPED, result.status());
+        assertTrue(result.warnings().stream()
+                .anyMatch(message -> message.contains("unsupported escape")));
+        assertTrue(result.warnings().stream()
+                .anyMatch(message -> message.contains("incomplete escape")));
+        assertTrue(result.warnings().stream()
+                .anyMatch(message -> message.contains("unescaped '|'")));
+    }
+
+    @Test
+    public void load_invalidUtf8_fileBackedUpAndWarningReturned(@TempDir Path tempDir)
+            throws IOException {
+        Path file = tempDir.resolve("lily.txt");
+        Files.write(file, new byte[] {(byte) 0xC3, (byte) 0x28});
+        Clock clock = Clock.fixed(Instant.parse("2026-09-17T03:04:05Z"), ZoneOffset.UTC);
+        Storage storage = new Storage(file.toString(), clock);
+
+        LoadResult result = storage.loadWithReport();
+        Path backup = tempDir.resolve("lily.txt.corrupted-20260917-030405");
+
+        assertEquals(LoadStatus.INVALID_UTF8_BACKED_UP, result.status());
+        assertFalse(Files.exists(file));
+        assertTrue(Files.exists(backup));
+        assertTrue(result.warnings().stream().anyMatch(message -> message.contains(backup.toString())));
+    }
+
+    @Test
+    public void load_invalidUtf8WhenBackupNameExists_usesNumericSuffix(@TempDir Path tempDir)
+            throws IOException {
+        Path file = tempDir.resolve("lily.txt");
+        Path firstBackup = tempDir.resolve("lily.txt.corrupted-20260917-030405");
+        Files.writeString(firstBackup, "older backup");
+        Files.write(file, new byte[] {(byte) 0xC3, (byte) 0x28});
+        Clock clock = Clock.fixed(Instant.parse("2026-09-17T03:04:05Z"), ZoneOffset.UTC);
+
+        new Storage(file.toString(), clock).loadWithReport();
+
+        assertEquals("older backup", Files.readString(firstBackup));
+        assertTrue(Files.exists(tempDir.resolve("lily.txt.corrupted-20260917-030405-1")));
     }
 
     @Test
@@ -254,8 +352,10 @@ public class StorageTest {
         // tempDir itself already exists as a directory, so pointing Storage directly at
         // it exercises the "not a regular file" guard rather than "file is missing".
         Storage storage = storageIn(tempDir);
-        assertFalse(storage.load() == null);
-        assertTrue(storage.load().isEmpty());
+        LoadResult result = storage.loadWithReport();
+        assertTrue(result.tasks().isEmpty());
+        assertEquals(LoadStatus.SAVE_PATH_NOT_FILE, result.status());
+        assertFalse(result.warnings().isEmpty());
     }
 
     // ----- helpers -----

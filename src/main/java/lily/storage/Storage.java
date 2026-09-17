@@ -3,15 +3,16 @@ package lily.storage;
 import java.io.IOException;
 import java.nio.charset.MalformedInputException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.AccessDeniedException;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Pattern;
 
 import lily.exception.LilyException;
 import lily.parser.DateTimeParser;
@@ -30,21 +31,19 @@ import lily.task.ToDo;
  * different save file without changing this class.
  *
  * <p>
- * Loading is designed to never crash the application: unreadable files are
- * backed up
- * and a fresh list is returned, and individual corrupted lines are skipped
- * (with a
- * warning) rather than aborting the whole load. Saving is done atomically so a
- * crash or
- * power loss mid-write cannot leave behind a half-written, corrupted data file.
+ * Loading is designed to never crash the application. Invalid UTF-8 files are
+ * backed up, access failures leave the original untouched, and individual
+ * malformed records are skipped rather than aborting the whole load. Saving is
+ * done atomically so a crash or power loss mid-write cannot leave behind a
+ * half-written data file.
  */
 public class Storage {
     /** Literal delimiter used between fields in a saved record. */
     private static final String DELIMITER = " | ";
-    private static final Pattern DELIMITER_SPLIT_PATTERN = Pattern.compile(Pattern.quote(DELIMITER));
 
     private final Path dataFile;
     private final Path dataDir;
+    private final Clock clock;
 
     /**
      * Creates a Storage bound to the given file path.
@@ -53,9 +52,15 @@ public class Storage {
      *                 {@code "data/lily.txt"}
      */
     public Storage(String filePath) {
+        this(filePath, Clock.systemDefaultZone());
+    }
+
+    /** Creates storage with a supplied clock so backup naming can be tested reliably. */
+    Storage(String filePath, Clock clock) {
         this.dataFile = Path.of(filePath);
         Path parent = dataFile.getParent();
         this.dataDir = (parent != null) ? parent : Path.of(".");
+        this.clock = clock;
     }
 
     /**
@@ -75,11 +80,6 @@ public class Storage {
             return "";
         }
         return field.replace("\\", "\\\\").replace("|", "\\|");
-    }
-
-    /** Reverses {@link #escapeField(String)}. */
-    private static String unescapeField(String field) {
-        return field.replace("\\|", "|").replace("\\\\", "\\");
     }
 
     /**
@@ -104,6 +104,17 @@ public class Storage {
         } catch (FileAlreadyExistsException e) {
             throw new IOException("Cannot save tasks: '" + dataDir
                     + "' exists but is not a directory. Please remove or rename it.", e);
+        } catch (AccessDeniedException e) {
+            throw new IOException("Cannot create or access data directory '" + dataDir
+                    + "': permission denied.", e);
+        } catch (IOException e) {
+            throw new IOException("Cannot create data directory '" + dataDir + "': "
+                    + safeReason(e) + ".", e);
+        }
+
+        if (Files.isDirectory(dataFile)) {
+            throw new IOException("Cannot save tasks: '" + dataFile
+                    + "' is a directory, not a file.");
         }
 
         List<String> taskRecords = serializeTasks(tasks);
@@ -131,9 +142,12 @@ public class Storage {
             tempFile = Files.createTempFile(dataDir, "lily", ".tmp");
             Files.write(tempFile, taskRecords, StandardCharsets.UTF_8);
             moveIntoPlace(tempFile);
+        } catch (AccessDeniedException e) {
+            cleanupQuietly(tempFile);
+            throw new IOException("Permission denied while saving tasks to '" + dataFile + "'.", e);
         } catch (IOException e) {
             cleanupQuietly(tempFile);
-            throw new IOException("Unable to save tasks to '" + dataFile + "': " + e.getMessage(), e);
+            throw new IOException("Unable to save tasks to '" + dataFile + "': " + safeReason(e), e);
         }
     }
 
@@ -176,47 +190,68 @@ public class Storage {
      * <ul>
      * <li>a missing file, or a missing data directory, simply yields an empty
      * list;</li>
-     * <li>individual malformed lines are skipped (with a warning printed) so the
+     * <li>individual malformed lines are skipped (with a returned warning) so the
      * rest of a mostly-valid file still loads;</li>
-     * <li>if the file cannot be read at all (bad permissions, wrong encoding,
-     * binary garbage, etc.), it is renamed aside as a timestamped backup and an
-     * empty list is returned so the user can keep using Lily.</li>
+     * <li>invalid UTF-8 is renamed aside as a timestamped backup;</li>
+     * <li>permission and other I/O failures preserve the original file.</li>
      * </ul>
      *
      * @return the tasks reconstructed from the data file (possibly empty)
      */
     public List<Task> load() {
-        List<String> taskRecords = readTaskRecords();
-        return parseTaskRecords(taskRecords);
+        return loadWithReport().tasks();
     }
 
     /**
-     * Reads the saved records, recovering from an unreadable file by backing it up.
+     * Loads tasks together with warnings suitable for display in either user
+     * interface.
      */
-    private List<String> readTaskRecords() {
-        if (Files.notExists(dataFile)) {
-            return new ArrayList<>();
+    public LoadResult loadWithReport() {
+        List<String> warnings = new ArrayList<>();
+        ReadResult readResult = readTaskRecords(warnings);
+        ParseResult parseResult = parseTaskRecords(readResult.taskRecords(), warnings);
+        LoadStatus status = parseResult.skippedCount() > 0
+                ? LoadStatus.MALFORMED_RECORDS_SKIPPED : readResult.status();
+        return new LoadResult(parseResult.tasks(), warnings, status);
+    }
+
+    /**
+     * Reads saved records while classifying missing paths and read failures.
+     */
+    private ReadResult readTaskRecords(List<String> warnings) {
+        if (Files.notExists(dataDir)) {
+            return new ReadResult(List.of(), LoadStatus.DATA_DIRECTORY_MISSING);
         }
 
-        if (!Files.isRegularFile(dataFile)) {
-            System.out.println("[Warning] '" + dataFile
-                    + "' is not a regular file; starting with an empty task list.");
-            return new ArrayList<>();
+        if (Files.notExists(dataFile)) {
+            return new ReadResult(List.of(), LoadStatus.SAVE_FILE_MISSING);
+        }
+
+        if (Files.isDirectory(dataFile)) {
+            warnings.add("The save path '" + dataFile
+                    + "' is a directory, not a file. Lily started with an empty task list.");
+            return new ReadResult(List.of(), LoadStatus.SAVE_PATH_NOT_FILE);
         }
 
         try {
-            return Files.readAllLines(dataFile, StandardCharsets.UTF_8);
+            return new ReadResult(Files.readAllLines(dataFile, StandardCharsets.UTF_8), LoadStatus.LOADED);
         } catch (MalformedInputException e) {
-            backupCorruptedFile("not valid UTF-8 text");
-            return new ArrayList<>();
+            LoadStatus status = backupCorruptedFile("it is not valid UTF-8 text", warnings)
+                    ? LoadStatus.INVALID_UTF8_BACKED_UP : LoadStatus.INVALID_UTF8_BACKUP_FAILED;
+            return new ReadResult(List.of(), status);
+        } catch (AccessDeniedException | SecurityException e) {
+            warnings.add("Permission was denied while reading '" + dataFile
+                    + "'. The original file was left untouched, and Lily started with an empty task list.");
+            return new ReadResult(List.of(), LoadStatus.PERMISSION_DENIED);
         } catch (IOException e) {
-            backupCorruptedFile(e.getMessage());
-            return new ArrayList<>();
+            warnings.add("Could not read '" + dataFile + "' (" + safeReason(e)
+                    + "). The original file was left untouched, and Lily started with an empty task list.");
+            return new ReadResult(List.of(), LoadStatus.READ_FAILED);
         }
     }
 
     /** Parses valid records and reports individual records that cannot be recovered. */
-    private List<Task> parseTaskRecords(List<String> taskRecords) {
+    private ParseResult parseTaskRecords(List<String> taskRecords, List<String> warnings) {
         List<Task> tasks = new ArrayList<>();
         int lineNumber = 0;
         int skippedCount = 0;
@@ -228,35 +263,51 @@ public class Storage {
             try {
                 tasks.add(parseTask(taskRecord));
             } catch (LilyException e) {
-                System.out.println("[Warning] Skipping corrupted entry on line " + lineNumber
-                        + " of '" + dataFile + "': " + e.getMessage());
+                warnings.add("Skipped malformed entry on line " + lineNumber
+                        + " of '" + dataFile + "': " + e.getMessage() + ".");
                 skippedCount++;
             }
         }
 
         if (skippedCount > 0) {
-            System.out.println("[Warning] " + skippedCount
-                    + " corrupted task record(s) were ignored. The rest of your tasks loaded normally.");
+            warnings.add(skippedCount + " malformed task record(s) were ignored; "
+                    + "the remaining tasks loaded normally.");
         }
-        return tasks;
+        return new ParseResult(tasks, skippedCount);
     }
 
     /**
-     * Moves an unreadable data file aside (with a timestamped suffix) so a fresh,
-     * empty save file can take its place instead of the chatbot refusing to start.
+     * Moves a file proven to contain invalid UTF-8 aside so a fresh save file can
+     * take its place instead of the chatbot refusing to start.
      */
-    private void backupCorruptedFile(String reason) {
-        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"));
-        Path backup = dataDir.resolve(dataFile.getFileName() + ".corrupted-" + timestamp);
+    private boolean backupCorruptedFile(String reason, List<String> warnings) {
+        String timestamp = LocalDateTime.now(clock).format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"));
         try {
-            Files.move(dataFile, backup, StandardCopyOption.REPLACE_EXISTING);
-            System.out.println("[Warning] Could not read '" + dataFile + "' (" + reason
-                    + "). The unreadable file was backed up to '" + backup
-                    + "' and Lily is starting with an empty task list.");
+            Path backup = moveToUnusedBackup(timestamp);
+            warnings.add("Could not read '" + dataFile + "' because " + reason
+                    + ". The corrupted file was backed up to '" + backup
+                    + "', and Lily started with an empty task list.");
+            return true;
         } catch (IOException moveFailed) {
-            System.out.println("[Warning] Could not read '" + dataFile + "' (" + reason
-                    + "), and it could not be backed up either (" + moveFailed.getMessage()
-                    + "). Starting with an empty task list; the file was left untouched.");
+            warnings.add("Could not read '" + dataFile + "' because " + reason
+                    + ", and the corrupted file could not be backed up (" + safeReason(moveFailed)
+                    + "). Lily started with an empty task list; the original file was left untouched.");
+            return false;
+        }
+    }
+
+    /** Moves a corrupt file without replacing a backup created in the same second. */
+    private Path moveToUnusedBackup(String timestamp) throws IOException {
+        int suffix = 0;
+        while (true) {
+            String suffixText = suffix == 0 ? "" : "-" + suffix;
+            Path backup = dataDir.resolve(dataFile.getFileName()
+                    + ".corrupted-" + timestamp + suffixText);
+            try {
+                return Files.move(dataFile, backup);
+            } catch (FileAlreadyExistsException e) {
+                suffix++;
+            }
         }
     }
 
@@ -268,26 +319,85 @@ public class Storage {
      *                       an invalid done-flag, or blank required fields
      */
     private static Task parseTask(String taskRecord) throws LilyException {
-        String[] rawFields = DELIMITER_SPLIT_PATTERN.split(taskRecord, -1);
-        if (rawFields.length < 3) {
+        String[] fields = parseEscapedFields(taskRecord);
+        if (fields.length < 3) {
             throw new LilyException("expected at least 3 fields separated by \" | \", found "
-                    + rawFields.length);
+                    + fields.length);
         }
 
-        String[] fields = normalizeFields(rawFields);
         validateDoneFlag(fields[1]);
         Task task = createTask(fields);
         restoreDoneState(task, fields[1]);
         return task;
     }
 
-    /** Trims and unescapes every field in a saved record. */
-    private static String[] normalizeFields(String[] rawFields) {
-        String[] fields = new String[rawFields.length];
-        for (int i = 0; i < rawFields.length; i++) {
-            fields[i] = unescapeField(rawFields[i].trim());
+    /** Parses fields while rejecting unknown, dangling, and unescaped delimiters. */
+    private static String[] parseEscapedFields(String taskRecord) throws LilyException {
+        List<String> fields = new ArrayList<>();
+        StringBuilder field = new StringBuilder();
+        int index = 0;
+        while (index < taskRecord.length()) {
+            if (taskRecord.startsWith(DELIMITER, index)) {
+                fields.add(field.toString().trim());
+                field.setLength(0);
+                index += DELIMITER.length();
+                continue;
+            }
+
+            char character = taskRecord.charAt(index);
+            if (character == '\\') {
+                if (index + 1 >= taskRecord.length()) {
+                    throw new LilyException("field ends with an incomplete escape");
+                }
+                char escapedCharacter = taskRecord.charAt(index + 1);
+                if (escapedCharacter != '\\' && escapedCharacter != '|') {
+                    throw new LilyException("unsupported escape '\\" + escapedCharacter + "'");
+                }
+                field.append(escapedCharacter);
+                index += 2;
+                continue;
+            }
+            if (character == '|') {
+                throw new LilyException("unescaped '|' inside a field");
+            }
+            field.append(character);
+            index++;
         }
-        return fields;
+        fields.add(field.toString().trim());
+        return fields.toArray(String[]::new);
+    }
+
+    private static String safeReason(Exception exception) {
+        return exception.getMessage() == null || exception.getMessage().isBlank()
+                ? exception.getClass().getSimpleName()
+                : exception.getMessage();
+    }
+
+    /** Describes how loading completed, including normal first-run cases. */
+    public enum LoadStatus {
+        LOADED,
+        DATA_DIRECTORY_MISSING,
+        SAVE_FILE_MISSING,
+        SAVE_PATH_NOT_FILE,
+        PERMISSION_DENIED,
+        INVALID_UTF8_BACKED_UP,
+        INVALID_UTF8_BACKUP_FAILED,
+        READ_FAILED,
+        MALFORMED_RECORDS_SKIPPED
+    }
+
+    /** Immutable result containing tasks, startup warnings, and the load outcome. */
+    public record LoadResult(List<Task> tasks, List<String> warnings, LoadStatus status) {
+        public LoadResult {
+            tasks = List.copyOf(tasks);
+            warnings = List.copyOf(warnings);
+        }
+    }
+
+    private record ReadResult(List<String> taskRecords, LoadStatus status) {
+    }
+
+    private record ParseResult(List<Task> tasks, int skippedCount) {
     }
 
     /** Validates the common completion-state field used by every record type. */

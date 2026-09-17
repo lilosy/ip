@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -32,6 +33,20 @@ class LilyTest {
 
         assertEquals("I’m not quite sure how to tend to that. Try `list`, `todo`, `deadline`, or `event`.",
                 lily.getResponse("water plants"));
+    }
+
+    @Test
+    void getStartupMessage_malformedSaveRecord_warningShownToGuiAndCliCallers() throws IOException {
+        Path saveFile = temporaryDirectory.resolve("lily.txt");
+        Files.write(saveFile, java.util.List.of("T | 0 | valid task", "broken record"),
+                StandardCharsets.UTF_8);
+
+        Lily lily = new Lily(saveFile.toString());
+
+        assertTrue(lily.getStartupMessage().startsWith(Lily.WELCOME_MESSAGE));
+        assertTrue(lily.getStartupMessage().contains("Startup notice:"));
+        assertTrue(lily.getStartupMessage().contains("Skipped malformed entry on line 2"));
+        assertTrue(lily.getResponse("list").contains("valid task"));
     }
 
     @Test

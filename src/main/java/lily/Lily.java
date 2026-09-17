@@ -13,6 +13,7 @@ import lily.parser.DateTimeParser;
 import lily.parser.Parser;
 import lily.parser.Parser.ParsedCommand;
 import lily.storage.Storage;
+import lily.storage.Storage.LoadResult;
 import lily.task.Deadline;
 import lily.task.Event;
 import lily.task.Task;
@@ -28,6 +29,7 @@ public class Lily {
     private final Storage storage;
     private final TaskList tasks;
     private final Ui ui;
+    private final String startupMessage;
 
     /**
      * Sets up Lily against the given save-file path, loading any tasks already
@@ -39,10 +41,24 @@ public class Lily {
     public Lily(String filePath) {
         ui = new Ui();
         storage = new Storage(filePath);
-        // load() never throws: a missing, unreadable, or partially corrupted save file
-        // is
-        // handled internally (with a printed warning) so startup always succeeds.
-        tasks = new TaskList(storage.load());
+        LoadResult loadResult = storage.loadWithReport();
+        tasks = new TaskList(loadResult.tasks());
+        startupMessage = buildStartupMessage(loadResult.warnings());
+    }
+
+    /** Returns the greeting followed by any warnings produced while loading tasks. */
+    public String getStartupMessage() {
+        return startupMessage;
+    }
+
+    private String buildStartupMessage(List<String> warnings) {
+        if (warnings.isEmpty()) {
+            return WELCOME_MESSAGE;
+        }
+        StringBuilder message = new StringBuilder(WELCOME_MESSAGE)
+                .append("\n\nStartup notice:");
+        warnings.forEach(warning -> message.append("\n- ").append(warning));
+        return message.toString();
     }
 
     /**
@@ -271,7 +287,7 @@ public class Lily {
 
     /** Runs the read-command/act/respond loop until the user says {@code bye}. */
     public void run() {
-        ui.showWelcome(WELCOME_MESSAGE);
+        ui.showWelcome(getStartupMessage());
 
         while (true) {
             String userInput = ui.readCommand();
