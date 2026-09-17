@@ -17,9 +17,9 @@
 
 .header-title {
     -fx-font-family: Georgia, serif;
-    -fx-font-size: 24px;
+    -fx-font-size: 27px;
     -fx-font-weight: bold;
-    -fx-text-fill: #5B4770;
+    -fx-text-fill: #463456;
 }
 
 .chat-scroll-pane,
@@ -44,6 +44,8 @@
     -fx-padding: 9 11;
     -fx-background-radius: 12;
     -fx-text-fill: #2D3A2E;
+    -fx-font-size: 15px;
+    -fx-line-spacing: 2px;
 }
 
 .lily-message {
