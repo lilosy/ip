@@ -81,7 +81,7 @@ public class Lily {
      */
     public Response getResponseResult(String input) {
         if (input == null || input.isBlank()) {
-            return new Response("Please enter a command.", true);
+            return new Response("What would you like to tend to? Enter a command to get started.", true);
         }
 
         try {
@@ -125,7 +125,8 @@ public class Lily {
             requireAtMostOneArgument(command, argument);
             return showSchedule(argument);
         default:
-            return error("I’m not quite sure how to tend to that. Try `list`, `todo`, `deadline`, or `event`.");
+            return error("I’m not sure how to tend to that yet. "
+                    + "Try a command such as list, todo, deadline, or event.");
         }
     }
 
@@ -133,7 +134,7 @@ public class Lily {
         String command = shouldMarkDone ? "mark" : "unmark";
         int index = parseRequiredTaskIndex(argument, command);
         if (!tasks.containsIndex(index)) {
-            return error("That task number does not exist.");
+            return error("I couldn’t find that task in your garden. Check list and try again.");
         }
 
         Task task = shouldMarkDone ? markTask(index) : unmarkTask(index);
@@ -157,7 +158,7 @@ public class Lily {
     private CommandResult deleteTask(String argument) throws LilyException {
         int index = parseRequiredTaskIndex(argument, "delete");
         if (!tasks.containsIndex(index)) {
-            return error("That task number does not exist.");
+            return error("I couldn’t find that task in your garden. Check list and try again.");
         }
         Task removed = tasks.remove(index);
         return changed("All cleared away:\n  " + removed + "\nYou now have "
@@ -166,7 +167,7 @@ public class Lily {
 
     private CommandResult findTasks(String argument) throws LilyException {
         if (argument.isEmpty()) {
-            throw new LilyException("Please provide a keyword to search for.");
+            throw new LilyException("What should I look for? Add one keyword after find.");
         }
         requireSingleArgument("find", argument);
         return unchanged(formatTaskList(tasks.findTasks(argument), "Here are the matching tasks in your list:"));
@@ -253,8 +254,8 @@ public class Lily {
 
     private int parseRequiredTaskIndex(String argument, String command) throws LilyException {
         if (argument.isEmpty()) {
-            throw new LilyException("Please provide a task number to " + command
-                    + ", e.g. \"" + command + " 2\".");
+            throw new LilyException("Which task should I " + command
+                    + "? Give me its number, e.g. " + command + " 2.");
         }
         return Parser.parseTaskIndex(argument);
     }
@@ -262,14 +263,16 @@ public class Lily {
     /** Rejects arguments supplied to a command that accepts none. */
     private void requireNoArguments(String command, String argument) throws LilyException {
         if (!argument.isEmpty()) {
-            throw new LilyException("The '" + command + "' command does not accept arguments.");
+            throw new LilyException("The " + command
+                    + " command is ready as it is—it doesn’t need anything after it.");
         }
     }
 
     /** Rejects commands whose optional/required argument contains another token. */
     private void requireAtMostOneArgument(String command, String argument) throws LilyException {
         if (argument.contains(" ")) {
-            throw new LilyException("The '" + command + "' command accepts at most one argument.");
+            throw new LilyException("I can show one day at a time. "
+                    + "Give schedule one date, today, or tomorrow.");
         }
     }
 

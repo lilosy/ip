@@ -26,7 +26,7 @@ import lily.ui.Ui;
  */
 public class Parser {
     private static final String COMMAND_SPACING_ERROR =
-            "Use single spaces between words.";
+            "Those spaces are a little tangled. Use single spaces between command arguments.";
 
     private Parser() {
         // Static utility class; no instances.
@@ -45,7 +45,7 @@ public class Parser {
      */
     public static ParsedCommand parseCommand(String userInput) throws LilyException {
         if (userInput == null || userInput.isBlank()) {
-            throw new LilyException("Please enter a command.");
+            throw new LilyException("What would you like to tend to? Enter a command to get started.");
         }
         String trimmedInput = userInput.trim();
         if (trimmedInput.chars().anyMatch(character -> Character.isWhitespace(character)
@@ -80,12 +80,14 @@ public class Parser {
      */
     public static int parseTaskIndex(String argument) throws LilyException {
         if (argument == null || !argument.matches("[0-9]+")) {
-            throw new LilyException("Please provide one positive whole-number task number.");
+            throw new LilyException("I need one positive whole-number task number. "
+                    + "Check list to find the right one.");
         }
         try {
             int oneBasedIndex = Integer.parseInt(argument);
             if (oneBasedIndex == 0) {
-                throw new LilyException("Please provide one positive whole-number task number.");
+                throw new LilyException("I need one positive whole-number task number. "
+                        + "Check list to find the right one.");
             }
             return oneBasedIndex - 1;
         } catch (NumberFormatException e) {
@@ -201,7 +203,16 @@ public class Parser {
     /** Rejects missing descriptions and characters unsafe for line-based storage. */
     private static void validateDescription(String description, String taskType) throws LilyException {
         if (description.isBlank()) {
-            throw new LilyException("Add a description for the " + taskType + " task.");
+            String message = switch (taskType) {
+            case "todo" -> "This task needs a little label before I can plant it. "
+                    + "Add a description after todo.";
+            case "deadline" -> "This deadline needs a little label before I can plant it. "
+                    + "Add a description before /by.";
+            case "event" -> "This event needs a little label before I can plant it. "
+                    + "Add a description before /from.";
+            default -> "This task needs a little label before I can plant it. Add a description.";
+            };
+            throw new LilyException(message);
         }
         if (description.codePoints().anyMatch(Parser::isUnsafeDescriptionCharacter)) {
             throw new LilyException("Task descriptions cannot contain line breaks or control characters.");

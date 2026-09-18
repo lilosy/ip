@@ -74,7 +74,8 @@ public class ParserTest {
     public void parseTodo_blankDescription_exceptionThrown() {
         LilyException thrown = assertThrows(LilyException.class, () -> Parser.parseTodo("todo"));
 
-        assertEquals("Add a description for the todo task.", thrown.getMessage());
+        assertEquals("This task needs a little label before I can plant it. "
+                + "Add a description after todo.", thrown.getMessage());
     }
 
     @Test
@@ -129,7 +130,8 @@ public class ParserTest {
         LilyException noDate = assertThrows(LilyException.class,
                 () -> Parser.parseDeadline("deadline Submit report /by"));
 
-        assertEquals("Add a description for the deadline task.", noDescription.getMessage());
+        assertEquals("This deadline needs a little label before I can plant it. "
+                + "Add a description before /by.", noDescription.getMessage());
         assertEquals("Add a date/time after '/by'.", noDate.getMessage());
     }
 
@@ -147,6 +149,15 @@ public class ParserTest {
                 "event Pair  programming  /from 2026-09-20 1400 /to 2026-09-20 1600"));
 
         assertEquals("Pair  programming", event.getDescription());
+    }
+
+    @Test
+    public void parseEvent_blankDescription_exceptionThrown() {
+        LilyException thrown = assertThrows(LilyException.class,
+                () -> Parser.parseEvent("event /from 2026-09-20 1400 /to 2026-09-20 1600"));
+
+        assertEquals("This event needs a little label before I can plant it. "
+                + "Add a description before /from.", thrown.getMessage());
     }
 
     @Test
@@ -264,11 +275,13 @@ public class ParserTest {
 
     private static void assertSpacingError(String input) {
         LilyException thrown = assertThrows(LilyException.class, () -> Parser.parseCommand(input));
-        assertEquals("Use single spaces between words.", thrown.getMessage());
+        assertEquals("Those spaces are a little tangled. "
+                + "Use single spaces between command arguments.", thrown.getMessage());
     }
 
     private static void assertInvalidTaskNumber(String input) {
         LilyException thrown = assertThrows(LilyException.class, () -> Parser.parseTaskIndex(input));
-        assertEquals("Please provide one positive whole-number task number.", thrown.getMessage());
+        assertEquals("I need one positive whole-number task number. "
+                + "Check list to find the right one.", thrown.getMessage());
     }
 }

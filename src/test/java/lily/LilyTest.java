@@ -22,7 +22,15 @@ class LilyTest {
         Lily.Response response = lily.getResponseResult("water plants");
 
         assertTrue(response.isError());
-        assertTrue(response.message().contains("not quite sure"));
+        assertTrue(response.message().contains("not sure"));
+    }
+
+    @Test
+    void getResponse_blankCommand_returnsGardenThemedPrompt() {
+        Lily lily = new Lily(temporaryDirectory.resolve("lily.txt").toString());
+
+        assertEquals("What would you like to tend to? Enter a command to get started.",
+                lily.getResponse("   "));
     }
 
     @Test
@@ -62,7 +70,8 @@ class LilyTest {
     void getResponse_unknownCommand_returnsGardenThemedGuidance() {
         Lily lily = new Lily(temporaryDirectory.resolve("lily.txt").toString());
 
-        assertEquals("I’m not quite sure how to tend to that. Try `list`, `todo`, `deadline`, or `event`.",
+        assertEquals("I’m not sure how to tend to that yet. "
+                        + "Try a command such as list, todo, deadline, or event.",
                 lily.getResponse("water plants"));
     }
 
@@ -102,14 +111,16 @@ class LilyTest {
     void getResponse_noArgumentCommandWithArgument_rejected() {
         Lily lily = new Lily(temporaryDirectory.resolve("lily.txt").toString());
 
-        assertEquals("The 'list' command does not accept arguments.", lily.getResponse("list now"));
-        assertEquals("The 'bye' command does not accept arguments.", lily.getResponse("bye now"));
+        assertEquals("The list command is ready as it is—it doesn’t need anything after it.",
+                lily.getResponse("list now"));
+        assertEquals("The bye command is ready as it is—it doesn’t need anything after it.",
+                lily.getResponse("bye now"));
     }
 
     @Test
     void getResponse_indexCommandsWithInvalidIndexes_rejectedBeforeListAccess() {
         Lily lily = new Lily(temporaryDirectory.resolve("lily.txt").toString());
-        String expected = "Please provide one positive whole-number task number.";
+        String expected = "I need one positive whole-number task number. Check list to find the right one.";
 
         assertEquals(expected, lily.getResponse("mark 0"));
         assertEquals(expected, lily.getResponse("unmark -1"));
@@ -119,12 +130,33 @@ class LilyTest {
     }
 
     @Test
+    void getResponse_missingOrUnknownTaskNumber_returnsGardenThemedGuidance() {
+        Lily lily = new Lily(temporaryDirectory.resolve("lily.txt").toString());
+
+        assertEquals("Which task should I mark? Give me its number, e.g. mark 2.",
+                lily.getResponse("mark"));
+        assertEquals("Which task should I unmark? Give me its number, e.g. unmark 2.",
+                lily.getResponse("unmark"));
+        assertEquals("Which task should I delete? Give me its number, e.g. delete 2.",
+                lily.getResponse("delete"));
+        assertEquals("I couldn’t find that task in your garden. Check list and try again.",
+                lily.getResponse("mark 1"));
+    }
+
+    @Test
+    void getResponse_findWithoutKeyword_returnsGardenThemedGuidance() {
+        Lily lily = new Lily(temporaryDirectory.resolve("lily.txt").toString());
+
+        assertEquals("What should I look for? Add one keyword after find.", lily.getResponse("find"));
+    }
+
+    @Test
     void getResponse_findAndScheduleWithTooManyArguments_rejected() {
         Lily lily = new Lily(temporaryDirectory.resolve("lily.txt").toString());
 
         assertEquals("The 'find' command accepts exactly one argument.",
                 lily.getResponse("find read book"));
-        assertEquals("The 'schedule' command accepts at most one argument.",
+        assertEquals("I can show one day at a time. Give schedule one date, today, or tomorrow.",
                 lily.getResponse("schedule today extra"));
     }
 
