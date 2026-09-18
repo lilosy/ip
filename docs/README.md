@@ -4,6 +4,8 @@ Lily is a chat-style task manager for keeping track of todos, deadlines, and
 events. Type a command in the input box and press **Enter** or click **Send**.
 Lily replies in the chat and saves changes automatically.
 
+![Lily chatbot interface](Ui.png)
+
 ## Table of Contents
 
 - [Starting Lily](#starting-lily)
