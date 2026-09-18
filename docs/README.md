@@ -205,7 +205,8 @@ order. Viewing a schedule does not change your saved tasks.
 
 ### Say goodbye
 
-Shows Lily's farewell message without closing the graphical window.
+Shows Lily's farewell message, disables further input, and closes the application
+after a brief pause.
 
 **Format**: `bye`
 
@@ -218,14 +219,12 @@ bye
 ## Saving and closing
 
 Lily saves after you add, mark, unmark, or delete a task. Close the window
-normally when you want to exit. You can also type the following to see Lily's
-farewell message:
+normally when you want to exit, or type the following to show Lily's farewell
+message and close the application automatically:
 
 ```text
 bye
 ```
-
-The `bye` command does not close the graphical window.
 
 You do not need to run a separate save command. To back up your tasks, close Lily
 and copy the entire `data` folder to a safe location. Avoid editing
@@ -269,4 +268,4 @@ contain no private information.
 | Delete a task | `delete <task number>` | `delete 3` |
 | Find tasks by keyword | `find <keyword>` | `find report` |
 | View a daily schedule | `schedule [date]` | `schedule tomorrow` |
-| Show Lily's farewell message | `bye` | `bye` |
+| Show Lily's farewell message and close the application | `bye` | `bye` |

@@ -81,7 +81,7 @@ public class Lily {
      */
     public Response getResponseResult(String input) {
         if (input == null || input.isBlank()) {
-            return new Response("What would you like to tend to? Enter a command to get started.", true);
+            return new Response("What would you like to tend to? Enter a command to get started.", true, false);
         }
 
         try {
@@ -89,11 +89,11 @@ public class Lily {
             if (result.changedTaskList()) {
                 storage.save(tasks.toList());
             }
-            return new Response(result.response(), result.isError());
+            return new Response(result.response(), result.isError(), result.shouldExit());
         } catch (LilyException | IOException e) {
-            return new Response(e.getMessage(), true);
+            return new Response(e.getMessage(), true, false);
         } catch (RuntimeException e) {
-            return new Response("Something went wrong handling that command: " + e.getMessage(), true);
+            return new Response("Something went wrong handling that command: " + e.getMessage(), true, false);
         }
     }
 
@@ -105,7 +105,7 @@ public class Lily {
         switch (command) {
         case "bye":
             requireNoArguments(command, argument);
-            return unchanged(GOODBYE_MESSAGE);
+            return exiting(GOODBYE_MESSAGE);
         case "list":
             requireNoArguments(command, argument);
             return unchanged(formatTaskList(tasks.toList(), "Here's your little garden of tasks:"));
@@ -230,16 +230,21 @@ public class Lily {
     }
 
     private CommandResult changed(String response) {
-        return new CommandResult(response, true, false);
+        return new CommandResult(response, true, false, false);
     }
 
     private CommandResult unchanged(String response) {
-        return new CommandResult(response, false, false);
+        return new CommandResult(response, false, false, false);
+    }
+
+    /** Builds a successful response that asks the active interface to close. */
+    private CommandResult exiting(String response) {
+        return new CommandResult(response, false, false, true);
     }
 
     /** Builds an unchanged response that explains an invalid user command. */
     private CommandResult error(String response) {
-        return new CommandResult(response, false, true);
+        return new CommandResult(response, false, true, false);
     }
 
     private Task markTask(int index) {
@@ -295,12 +300,12 @@ public class Lily {
     }
 
     /** Represents a command reply and whether it needs to be saved. */
-    /** A reply from Lily together with the presentation status needed by the GUI. */
-    public record Response(String message, boolean isError) {
+    /** A reply together with the presentation and application-lifecycle status needed by an interface. */
+    public record Response(String message, boolean isError, boolean shouldExit) {
     }
 
-    /** Represents a command reply, whether it needs saving, and whether it is an error. */
-    private record CommandResult(String response, boolean changedTaskList, boolean isError) {
+    /** Represents a command reply and its persistence, error, and exit effects. */
+    private record CommandResult(String response, boolean changedTaskList, boolean isError, boolean shouldExit) {
     }
 
     /** A dated task together with its original number and per-day sorting data. */
@@ -318,9 +323,9 @@ public class Lily {
                 ui.showResponse(GOODBYE_MESSAGE);
                 break;
             }
-            String response = getResponse(userInput);
-            ui.showResponse(response);
-            if (response.equals(GOODBYE_MESSAGE)) {
+            Response response = getResponseResult(userInput);
+            ui.showResponse(response.message());
+            if (response.shouldExit()) {
                 break;
             }
         }

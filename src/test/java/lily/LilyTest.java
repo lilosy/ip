@@ -22,6 +22,7 @@ class LilyTest {
         Lily.Response response = lily.getResponseResult("water plants");
 
         assertTrue(response.isError());
+        assertFalse(response.shouldExit());
         assertTrue(response.message().contains("not sure"));
     }
 
@@ -40,6 +41,7 @@ class LilyTest {
         Lily.Response response = lily.getResponseResult("list");
 
         assertFalse(response.isError());
+        assertFalse(response.shouldExit());
     }
     @TempDir
     Path temporaryDirectory;
@@ -161,10 +163,24 @@ class LilyTest {
     }
 
     @Test
-    void getResponse_caseInsensitiveBye_returnsGoodbye() {
+    void getResponseResult_caseInsensitiveBye_returnsGoodbyeAndRequestsExit() {
         Lily lily = new Lily(temporaryDirectory.resolve("lily.txt").toString());
 
-        assertEquals(Lily.GOODBYE_MESSAGE, lily.getResponse("BYE"));
+        Lily.Response response = lily.getResponseResult("BYE");
+
+        assertEquals(Lily.GOODBYE_MESSAGE, response.message());
+        assertFalse(response.isError());
+        assertTrue(response.shouldExit());
+    }
+
+    @Test
+    void getResponseResult_byeWithArgument_returnsErrorWithoutRequestingExit() {
+        Lily lily = new Lily(temporaryDirectory.resolve("lily.txt").toString());
+
+        Lily.Response response = lily.getResponseResult("bye now");
+
+        assertTrue(response.isError());
+        assertFalse(response.shouldExit());
     }
 
     @Test
