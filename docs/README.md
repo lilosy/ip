@@ -10,7 +10,7 @@ Lily replies in the chat and saves changes automatically.
 - [Quick Start](#quick-start)
 - [Features](#features)
 - [Saving and Closing](#saving-and-closing)
-- [If Something Goes Wrong](#if-something-goes-wrong)
+- [Troubleshooting](#troubleshooting)
 - [Command Summary](#command-summary)
 
 ## Starting Lily
@@ -231,7 +231,7 @@ and copy the entire `data` folder to a safe location. Avoid editing
 `data/lily.txt` manually while Lily is running because a later command may
 overwrite those edits.
 
-## If something goes wrong
+## Troubleshooting
 
 Lily explains most command problems in the chat. The following table covers
 common issues and the steps you can take to resolve them.
