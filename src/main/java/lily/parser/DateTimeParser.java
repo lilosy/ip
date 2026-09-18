@@ -139,7 +139,7 @@ public class DateTimeParser {
         }
 
         throw new LilyException("I couldn't understand the date/time '" + rawInput
-                + "'. Try formats like: 2019-10-15, 2019-10-15 1800, or 2/12/2019 1800.");
+                + "'. Accepted formats: yyyy-MM-dd, yyyy-MM-dd HHmm, d/M/yyyy, or d/M/yyyy HHmm.");
     }
 
     /** A parsed date/time together with whether the user explicitly typed its time. */
@@ -177,7 +177,7 @@ public class DateTimeParser {
         }
 
         throw new LilyException("I couldn't understand the date '" + rawInput
-                + "'. Try formats like: 2019-10-15 or 2/12/2019.");
+                + "'. Accepted formats: yyyy-MM-dd or d/M/yyyy.");
     }
 
     /**

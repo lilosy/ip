@@ -113,7 +113,8 @@ public class DateTimeParserTest {
         LilyException thrown = assertThrows(LilyException.class,
                 () -> DateTimeParser.parseUserInput("not a date"));
         assertEquals("I couldn't understand the date/time 'not a date'. "
-                + "Try formats like: 2019-10-15, 2019-10-15 1800, or 2/12/2019 1800.", thrown.getMessage());
+                + "Accepted formats: yyyy-MM-dd, yyyy-MM-dd HHmm, d/M/yyyy, or d/M/yyyy HHmm.",
+                thrown.getMessage());
     }
 
     @Test
@@ -177,7 +178,7 @@ public class DateTimeParserTest {
         LilyException thrown = assertThrows(LilyException.class,
                 () -> DateTimeParser.parseScheduleDate("2026-02-30", today));
         assertEquals("I couldn't understand the date '2026-02-30'. "
-                + "Try formats like: 2019-10-15 or 2/12/2019.", thrown.getMessage());
+                + "Accepted formats: yyyy-MM-dd or d/M/yyyy.", thrown.getMessage());
     }
 
     // ----- formatForStorage -----

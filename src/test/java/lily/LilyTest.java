@@ -188,7 +188,7 @@ class LilyTest {
         Lily lily = new Lily(temporaryDirectory.resolve("lily.txt").toString());
 
         assertEquals("I couldn't understand the date '2026-02-30'. "
-                        + "Try formats like: 2019-10-15 or 2/12/2019.",
+                        + "Accepted formats: yyyy-MM-dd or d/M/yyyy.",
                 lily.getResponse("schedule 2026-02-30"));
     }
 
