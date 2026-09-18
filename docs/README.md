@@ -54,13 +54,14 @@ deadline, views the event on its scheduled date, and deletes the first task.
 > **ℹ️ Notes about command format**
 >
 > - Command words are case-insensitive, so `TODO` and `todo` work alike. Task
->   descriptions keep the spelling you type.
+>   descriptions preserve the capitalization and repeated spaces you type.
 > - Words in `<angle brackets>` are required values that you must supply. For
 >   example, replace `<description>` in `todo <description>` with text such as
 >   `buy groceries`.
 > - Words in `[square brackets]` are optional. For example, `schedule [date]`
 >   can be entered as either `schedule` or `schedule tomorrow`.
-> - Use a single space between each part of a command.
+> - Use single spaces between command arguments. Repeated spaces inside task
+>   descriptions are allowed and are preserved.
 > - Dates for deadlines and events can use `yyyy-MM-dd` or `d/M/yyyy`. Add a
 >   time in the 24-hour `HHmm` format when needed; for example, `0930` means
 >   9:30 AM and `1800` means 6:00 PM.
@@ -241,9 +242,9 @@ common issues and the steps you can take to resolve them.
 | Running `java -version` reports that `java` is not recognised or cannot be found. | Install Java 25, ensure Java is added to your system's `PATH`, then close and reopen the terminal before trying again. |
 | Lily does not open, or Java reports an incompatible class version. | Confirm that `java -version` reports Java 25. If another version appears, configure your computer to use Java 25 and run Lily again. |
 | The terminal reports `Unable to access jarfile lily.jar`. | Open the terminal in the folder containing `lily.jar`. Check that the filename is exactly `lily.jar`, then run `java -jar lily.jar` again. |
-| Lily does not recognise a command. | Check its spelling and compare it with the [Command Summary](#command-summary). Use a single space between each part of the command. |
+| Lily does not recognise a command. | Check its spelling and compare it with the [Command Summary](#command-summary). Use single spaces between command arguments; repeated spaces are supported only inside task descriptions. |
 | Lily rejects a date or time. | Use one of the supported date formats and write times using four-digit, 24-hour `HHmm` notation. Check that the date exists and, for an event, that its end is not before its start. |
-| Lily says that a task number does not exist. | Run `list` again and use the current positive whole number shown beside the task. Task numbers can change after a task is deleted. |
+| Lily cannot find the specified task number. | Run `list` again and use the current positive whole number shown beside the task. Task numbers can change after a task is deleted. |
 | Previously saved tasks are missing. | Close Lily without making further changes, then check that you started it from the same folder as before. The expected save file is `data/lily.txt` relative to that folder. Check any other folder from which Lily may have been run for another `data` folder. |
 | Lily reports that it cannot create or write to the `data` folder. | Move `lily.jar` to a folder where you have permission to create and edit files. Also check that an ordinary file named `data` is not blocking Lily from creating the folder. |
 | Lily displays a startup warning about malformed task records. | Close Lily before changing any tasks and make a backup copy of the `data` folder. Lily loads the valid records and identifies the invalid lines in the warning. Restore a known-good backup if one is available; otherwise, keep the backup and recreate the affected tasks in Lily. |
