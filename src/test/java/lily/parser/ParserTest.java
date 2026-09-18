@@ -53,8 +53,16 @@ public class ParserTest {
     }
 
     @Test
-    public void parseCommand_repeatedSpaces_exceptionThrown() {
-        assertSpacingError("todo  read book");
+    public void parseCommand_repeatedSpacesInTaskDescription_preserved() throws LilyException {
+        Parser.ParsedCommand command = Parser.parseCommand("todo  read  book");
+
+        assertEquals("todo", command.commandWord());
+        assertEquals("read  book", command.arguments());
+    }
+
+    @Test
+    public void parseCommand_repeatedSpacesInNonTaskCommand_exceptionThrown() {
+        assertSpacingError("mark  1");
     }
 
     @Test
@@ -86,10 +94,24 @@ public class ParserTest {
     }
 
     @Test
+    public void parseTodo_repeatedSpacesInDescription_preserved() throws LilyException {
+        Task task = Parser.parseTodo("todo read  book");
+
+        assertEquals("read  book", task.getDescription());
+    }
+
+    @Test
     public void parseDeadline_singleByClause_parsedSuccessfully() throws LilyException {
         Task task = Parser.parseDeadline("deadline Submit report /by 2026-09-20 1800");
 
         assertEquals("Submit report", task.getDescription());
+    }
+
+    @Test
+    public void parseDeadline_repeatedSpacesInDescription_preserved() throws LilyException {
+        Task task = Parser.parseDeadline("deadline Submit  report  /by 2026-09-20 1800");
+
+        assertEquals("Submit  report", task.getDescription());
     }
 
     @Test
@@ -117,6 +139,14 @@ public class ParserTest {
                 "event Pair programming /from 2026-09-20 1400 /to 2026-09-20 1600"));
 
         assertEquals("Pair programming", event.getDescription());
+    }
+
+    @Test
+    public void parseEvent_repeatedSpacesInDescription_preserved() throws LilyException {
+        Event event = assertInstanceOf(Event.class, Parser.parseEvent(
+                "event Pair  programming  /from 2026-09-20 1400 /to 2026-09-20 1600"));
+
+        assertEquals("Pair  programming", event.getDescription());
     }
 
     @Test

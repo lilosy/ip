@@ -35,7 +35,9 @@ public class Parser {
     /**
      * Trims the outside of a complete command, validates its internal spacing, and
      * separates its command word from its arguments. Command words are
-     * case-insensitive, while argument text retains its original case.
+     * case-insensitive, while argument text retains its original case. Task-creation
+     * commands preserve repeated spaces inside descriptions; other commands still
+     * require single spaces so their arguments remain unambiguous.
      *
      * @param userInput complete command typed by the user
      * @return the normalized command word and case-preserved argument text
@@ -46,16 +48,28 @@ public class Parser {
             throw new LilyException("Please enter a command.");
         }
         String trimmedInput = userInput.trim();
-        if (trimmedInput.contains("  ")
-                || trimmedInput.chars().anyMatch(character -> Character.isWhitespace(character)
-                        && character != ' ')) {
+        if (trimmedInput.chars().anyMatch(character -> Character.isWhitespace(character)
+                && character != ' ')) {
             throw new LilyException(COMMAND_SPACING_ERROR);
         }
 
         String[] parts = trimmedInput.split(" ", 2);
         String commandWord = parts[0].toLowerCase(Locale.ROOT);
         String arguments = parts.length == 2 ? parts[1] : "";
+        if (trimmedInput.contains("  ") && !isTaskCreationCommand(commandWord)) {
+            throw new LilyException(COMMAND_SPACING_ERROR);
+        }
+        if (isTaskCreationCommand(commandWord)) {
+            // Extra spaces separating the command word from its description are not
+            // part of the description itself. Repeated spaces after the first
+            // description character are preserved.
+            arguments = arguments.stripLeading();
+        }
         return new ParsedCommand(commandWord, arguments);
+    }
+
+    private static boolean isTaskCreationCommand(String commandWord) {
+        return commandWord.equals("todo") || commandWord.equals("deadline") || commandWord.equals("event");
     }
 
     /**
@@ -169,9 +183,9 @@ public class Parser {
                     + "event <description> /from <start> /to <end>.");
         }
         return new String[] {
-                joinTokens(tokens, 0, fromIndex),
-                joinTokens(tokens, fromIndex + 1, toIndex),
-                joinTokens(tokens, toIndex + 1, tokens.length)
+                joinTokens(tokens, 0, fromIndex).strip(),
+                joinTokens(tokens, fromIndex + 1, toIndex).strip(),
+                joinTokens(tokens, toIndex + 1, tokens.length).strip()
         };
     }
 
@@ -210,8 +224,8 @@ public class Parser {
             throw new LilyException(errorMessage);
         }
         return new String[] {
-                joinTokens(tokens, 0, clauseIndex),
-                joinTokens(tokens, clauseIndex + 1, tokens.length)
+                joinTokens(tokens, 0, clauseIndex).strip(),
+                joinTokens(tokens, clauseIndex + 1, tokens.length).strip()
         };
     }
 

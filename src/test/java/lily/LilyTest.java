@@ -90,11 +90,12 @@ class LilyTest {
     }
 
     @Test
-    void getResponse_outerSpaces_ignoredButRepeatedInternalSpacesRejected() {
+    void getResponse_outerSpacesIgnoredAndRepeatedDescriptionSpacesPreserved() {
         Lily lily = new Lily(temporaryDirectory.resolve("lily.txt").toString());
 
         assertEquals("Your list is clear—a peaceful patch of soil.", lily.getResponse("  list  "));
-        assertEquals("Use single spaces between words.", lily.getResponse("todo  read book"));
+        lily.getResponse("todo read  book");
+        assertTrue(lily.getResponse("list").contains("read  book"));
     }
 
     @Test
